@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <include file="changelog/001-db-initial-setup.xml" relativeToChangelogFile="true"/>
+    <include file="changelog/002-add-version-column.xml" relativeToChangelogFile="true"/>
+<!--    <include file="changelog/003-insert-data.xml" relativeToChangelogFile="true"/>-->
+    <include file="changelog/004-create-employee-position.xml" relativeToChangelogFile="true"/>
+    <include file="changelog/005-import-status.xml" relativeToChangelogFile="true"/>
+
+</databaseChangeLog>

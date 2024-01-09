@@ -1,0 +1,6 @@
+type,firstName,lastName,pesel,height,weight,email,universityName,yearOfStudy,studyField,scholarship,pensionAmount,yearsWorked,employmentDate,position,salary
+student,John,Doe,1234567890,1.75,70,john.doe@example.com,University A,2,Computer Science,1000,,,,,,
+employee,Jane,Doe,0987654321,1.65,55,jane.doe@example.com,,,,,5,2018-01-01,Developer,3000
+retiree,Bob,Smith,5555555555,1.70,80,bob.smith@example.com,,,,1000,10,,,,,
+student,Alice,Johnson,3333333333,1.60,60,alice.j@example.com,University B,1,Mathematics,1200,,,,,,
+employee,Michael,Clark,2222222222,1.80,85,mike.clark@example.com,,,,,3,2019-07-15,Manager,4000
