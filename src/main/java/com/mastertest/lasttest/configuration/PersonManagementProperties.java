@@ -1,4 +1,4 @@
-package com.mastertest.lasttest.configuratio;
+package com.mastertest.lasttest.configuration;
 
 import lombok.Getter;
 import lombok.Setter;

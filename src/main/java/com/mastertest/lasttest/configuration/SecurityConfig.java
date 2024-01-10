@@ -1,4 +1,4 @@
-package com.mastertest.lasttest.configuratio;
+package com.mastertest.lasttest.configuration;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

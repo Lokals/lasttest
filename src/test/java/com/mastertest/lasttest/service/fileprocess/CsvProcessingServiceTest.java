@@ -1,8 +1,6 @@
 package com.mastertest.lasttest.service.fileprocess;
 
-import com.mastertest.lasttest.configuratio.PersonManagementProperties;
-import com.mastertest.lasttest.model.Person;
-import com.mastertest.lasttest.model.Student;
+import com.mastertest.lasttest.configuration.PersonManagementProperties;
 import com.mastertest.lasttest.model.factory.ImportStatus;
 import com.mastertest.lasttest.model.factory.StatusFile;
 import com.mastertest.lasttest.repository.PersonRepository;

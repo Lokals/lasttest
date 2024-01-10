@@ -1,7 +1,7 @@
 package com.mastertest.lasttest.service.fileprocess;
 
 
-import com.mastertest.lasttest.configuratio.PersonManagementProperties;
+import com.mastertest.lasttest.configuration.PersonManagementProperties;
 import com.mastertest.lasttest.model.Employee;
 import com.mastertest.lasttest.model.Person;
 import com.mastertest.lasttest.model.Retiree;
