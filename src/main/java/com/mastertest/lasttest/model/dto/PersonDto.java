@@ -2,32 +2,30 @@ package com.mastertest.lasttest.model.dto;
 
 
 import com.mastertest.lasttest.model.Person;
-import lombok.Builder;
-import lombok.Data;
+import jakarta.validation.constraints.*;
+import lombok.*;
 
 @Data
-@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class PersonDto {
 
-
-    protected Long id;
-    protected String pesel;
+    @NotBlank(message = "First name cannot be blank")
     protected String firstName;
+
+    @NotBlank(message = "Last name cannot be blank")
     protected String lastName;
+    @NotBlank(message = "PESEL cannot be blank")
+    @Size(min = 11, max = 11, message = "PESEL must be exactly 11 characters long")
+    protected String pesel;
+    @NotNull(message = "Height cannot be null")
+    @Positive(message = "Height must be positive")
     protected Double height;
+
+    @NotNull(message = "Weight cannot be null")
+    @Positive(message = "Weight must be positive")
     protected Double weight;
+
+    @Email(message = "Invalid email format")
     protected String email;
-
-
-    public static PersonDto fromEntity(Person person){
-        return PersonDto.builder()
-                .id(person.getId())
-                .pesel(person.getPesel())
-                .firstName(person.getFirstName())
-                .lastName(person.getLastName())
-                .height(person.getHeight())
-                .weight(person.getWeight())
-                .email(person.getEmail())
-                .build();
-    }
 }

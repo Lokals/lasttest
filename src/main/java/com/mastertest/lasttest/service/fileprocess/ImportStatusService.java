@@ -19,6 +19,7 @@ public class ImportStatusService {
 
     private final ImportStatusRepository importStatusRepository;
 
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
     public ImportStatus createNewImportStatus(String filename) {
         logger.info("Creating new import status for file: {}", filename);
         ImportStatus status = new ImportStatus();
@@ -45,6 +46,7 @@ public class ImportStatusService {
 
     }
 
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
     public ImportStatus getImportStatus(Long id) {
         logger.info("Retrieving import status for id: {}", id);
 

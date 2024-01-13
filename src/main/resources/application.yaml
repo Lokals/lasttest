@@ -19,10 +19,10 @@ server:
 
 logging:
   level:
-    root: INFO
+    root: DEBUG
     org:
-      springframework: INFO
-      hibernate: INFO
+      springframework: DEBUG
+      hibernate: DEBUG
 
 person-management:
   default-page-size: 10
