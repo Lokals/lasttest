@@ -1,44 +1,39 @@
 package com.mastertest.lasttest.controller;
 
-
 import com.mastertest.lasttest.configuration.PersonManagementProperties;
 import com.mastertest.lasttest.model.Person;
+import com.mastertest.lasttest.model.SearchCriteria;
 import com.mastertest.lasttest.model.dto.EmployeePositionDto;
 import com.mastertest.lasttest.model.dto.PersonDto;
-import com.mastertest.lasttest.model.dto.PersonSearchCriteria;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
 import com.mastertest.lasttest.model.dto.command.UpdateEmployeePositionCommand;
-import com.mastertest.lasttest.model.dto.command.UpdatePersonCommand;
 import com.mastertest.lasttest.model.factory.ImportStatus;
 import com.mastertest.lasttest.model.factory.StatusFile;
 import com.mastertest.lasttest.repository.ImportStatusRepository;
 import com.mastertest.lasttest.repository.PersonRepository;
+import com.mastertest.lasttest.search.PersonSearchSpecification;
 import com.mastertest.lasttest.service.employee.EmployeePositionService;
 import com.mastertest.lasttest.service.fileprocess.CsvImportService;
 import com.mastertest.lasttest.service.fileprocess.ImportStatusService;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
-//import com.mastertest.lasttest.service.person.PersonService;
 import com.mastertest.lasttest.strategy.StrategyManager;
-import jakarta.persistence.OptimisticLockException;
+
 import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationContext;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.text.ParseException;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @RestController
@@ -55,11 +50,28 @@ public class PersonController {
     private final StrategyManager strategyManager;
 
     @GetMapping("/search")
-    public Page<Person> searchPeople(PersonSearchCriteria criteria, Pageable pageable) {
-        if (pageable.getPageSize() > properties.getDefaultPageSize()) {
-            pageable = PageRequest.of(pageable.getPageNumber(), properties.getDefaultPageSize(), pageable.getSort());
+    public Page<Person> searchPeople(@RequestParam Map<String, String> allParams, Pageable pageable) {
+        Specification<Person> spec = Specification.where(null);
+
+        for (Map.Entry<String, String> entry : allParams.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+
+            if (value.contains(",")) {
+                String[] range = value.split(",");
+                if (range.length == 2) {
+                    SearchCriteria criteriaLower = new SearchCriteria(key, ">=", range[0], null);
+                    SearchCriteria criteriaUpper = new SearchCriteria(key, "<=", null, range[1]);
+                    spec = spec.and(new PersonSearchSpecification(criteriaLower))
+                            .and(new PersonSearchSpecification(criteriaUpper));
+                }
+            } else {
+                SearchCriteria criteria = new SearchCriteria(key, ":", value, null);
+                spec = spec.and(new PersonSearchSpecification(criteria));
+            }
         }
-        return personRepository.searchByCriteria(criteria, pageable);
+
+        return personRepository.findAll(spec, pageable);
     }
 
     @PostMapping("/add")
