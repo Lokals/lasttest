@@ -18,6 +18,7 @@ import com.mastertest.lasttest.service.person.UpdateStrategy;
 import com.mastertest.lasttest.validator.PersonValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 

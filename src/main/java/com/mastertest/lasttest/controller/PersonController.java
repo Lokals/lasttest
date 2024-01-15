@@ -10,6 +10,7 @@ import com.mastertest.lasttest.model.dto.command.UpdateEmployeeCommand;
 import com.mastertest.lasttest.model.dto.command.UpdatePersonCommand;
 import com.mastertest.lasttest.repository.PersonRepository;
 import com.mastertest.lasttest.search.PersonSearchSpecification;
+import com.mastertest.lasttest.search.SpecificationGenerator;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
 import com.mastertest.lasttest.service.person.PersonService;
 import com.mastertest.lasttest.service.person.UpdateStrategy;
@@ -43,33 +44,20 @@ public class PersonController {
     private final PersonManagementProperties properties;
     private final PersonService personService;
     private final StrategyManager strategyManager;
-    private final UpdateStrategyManager updateStrategyManager;
+    private final SpecificationGenerator specificationGenerator;
 
     private static final Logger logger = LoggerFactory.getLogger(PersonController.class);
 
     @GetMapping("/search")
     public Page<Person> searchPeople(@RequestParam Map<String, String> allParams, Pageable pageable) {
-        Specification<Person> spec = Specification.where(null);
+
         if (pageable.getPageSize() > properties.getDefaultPageSize()) {
             pageable = PageRequest.of(pageable.getPageNumber(), properties.getDefaultPageSize(), pageable.getSort());
         }
-        for (Map.Entry<String, String> entry : allParams.entrySet()) {
-            String key = entry.getKey();
-            String value = entry.getValue();
-
-            if (value.contains(",")) {
-                String[] range = value.split(",");
-                if (range.length == 2) {
-                    SearchCriteria criteriaBetween = new SearchCriteria(key, "between", range[0], range[1]);
-                    spec = spec.and(new PersonSearchSpecification(criteriaBetween));
-                }
-            } else {
-                SearchCriteria criteria = new SearchCriteria(key, ":", value, null);
-                spec = spec.and(new PersonSearchSpecification(criteria));
-            }
-        }
-        return personRepository.findAll(spec, pageable);
+        Specification<Person> specification = specificationGenerator.getSpecification(allParams);
+        return personRepository.findAll(specification, pageable);
     }
+
 
     @PostMapping("/add")
     public ResponseEntity<?> addPerson(@Valid @RequestBody CreatePersonCommand<?> command) {
@@ -77,7 +65,6 @@ public class PersonController {
         if (strategy == null) {
             return ResponseEntity.badRequest().body("Unknown person type: " + command.getType());
         }
-
         try {
             PersonDto createdPerson = strategy.validateAndSave(command);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdPerson);
@@ -89,24 +76,15 @@ public class PersonController {
     @PostMapping("/update/{id}")
     public ResponseEntity<?> updatePerson(@PathVariable Long id, @Valid @RequestBody Map<String, Object> commandMap) {
         try {
-            Person person = personService.getPersonById(id);
-            UpdateStrategy updateStrategy = updateStrategyManager.getUpdateStrategy(person.getType());
-            logger.debug("Selected update strategy: {}", updateStrategy.getClass().getSimpleName());
-            PersonDto personDto = updateStrategy.updateAndValidate(commandMap, person);
+            PersonDto personDto = personService.updatePerson(id, commandMap);
             return ResponseEntity.ok(personDto);
-
-
-//        } else{
-////            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("updateStrategy not found");
-//        }
-        } catch (
-                OptimisticLockException e) {
+        } catch (OptimisticLockException e) {
             logger.error("Entity edited during processing: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e);
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (
                 Exception e) {
             logger.error("Issue with processing request: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
 
     }
