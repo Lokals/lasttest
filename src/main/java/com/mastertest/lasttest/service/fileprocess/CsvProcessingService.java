@@ -1,31 +1,17 @@
 package com.mastertest.lasttest.service.fileprocess;
 
 
-import com.mastertest.lasttest.configuration.PersonManagementProperties;
-import com.mastertest.lasttest.model.Employee;
-import com.mastertest.lasttest.model.Person;
-import com.mastertest.lasttest.model.Retiree;
-import com.mastertest.lasttest.model.Student;
 import com.mastertest.lasttest.model.factory.ImportStatus;
 import com.mastertest.lasttest.model.factory.StatusFile;
-import com.mastertest.lasttest.repository.PersonRepository;
-import com.mastertest.lasttest.strategy.StrategyManager;
-import jakarta.persistence.EntityExistsException;
+import com.mastertest.lasttest.strategy.imports.StrategyManager;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
-import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.text.MessageFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Map;
-
-import static com.mastertest.lasttest.service.fileprocess.CsvRecordValidator.*;
-import static com.mastertest.lasttest.service.fileprocess.CsvRecordValidator.isValidYearsWorked;
 
 @AllArgsConstructor
 @Service
@@ -44,10 +30,6 @@ public class CsvProcessingService {
             if (strategy == null) {
                 throw new IllegalArgumentException(MessageFormat.format("No strategy found for type: {}",type));
             }
-//            ImportStrategy<?> strategy = strategies.get(type.toLowerCase());
-//            if (strategy == null) {
-//                throw new IllegalArgumentException("No strategy found for type: " + type);
-//            }
             strategy.validateParseAndSave(record);
         } catch (Exception e) {
             logger.error("Error processing row number {}: {}", importStatus.getProcessedRows(), e.getMessage());

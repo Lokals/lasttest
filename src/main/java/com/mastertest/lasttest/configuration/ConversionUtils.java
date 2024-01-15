@@ -14,4 +14,8 @@ public class ConversionUtils {
         return objectMapper.convertValue(map, dtoClass);
     }
 
+    public static <T> T convertMapToCommand(Map<String, Object> map, Class<T> commandClass) {
+        return objectMapper.convertValue(map, commandClass);
+    }
+
 }

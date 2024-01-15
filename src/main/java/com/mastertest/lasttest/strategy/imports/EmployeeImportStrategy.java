@@ -1,13 +1,13 @@
-package com.mastertest.lasttest.strategy;
+package com.mastertest.lasttest.strategy.imports;
 
 import com.mastertest.lasttest.configuration.ConversionUtils;
 import com.mastertest.lasttest.model.Person;
 import com.mastertest.lasttest.model.dto.EmployeeDto;
 import com.mastertest.lasttest.model.dto.PersonDto;
-import com.mastertest.lasttest.model.dto.StudentDto;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
 import com.mastertest.lasttest.repository.PersonRepository;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
+import com.mastertest.lasttest.validator.PersonValidator;
 import jakarta.persistence.EntityExistsException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -31,7 +31,7 @@ import java.util.Set;
 @Component
 public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
 
-    private final Validator validator;
+    private final PersonValidator validator;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     private final JdbcTemplate jdbcTemplate;
     private final PersonRepository personRepository;
@@ -48,27 +48,23 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
 
     @Override
     public PersonDto validateAndSave(CreatePersonCommand<?> command) {
-        EmployeeDto employeeDto = ConversionUtils.convertMapToDto((Map)command.getDetails(), EmployeeDto.class);
+        EmployeeDto employeeDto = ConversionUtils.convertMapToDto((Map) command.getDetails(), EmployeeDto.class);
         validateDto(employeeDto);
         return saveEmployee(employeeDto);
     }
 
     private void validateDto(EmployeeDto employeeDto) {
         Optional<Person> personExisting = personRepository.findByPesel(employeeDto.getPesel());
-        if  (personExisting.isPresent()){
+        if (personExisting.isPresent()) {
             logger.error("Person with pesel: {} exists", employeeDto.getPesel());
             throw new EntityExistsException(MessageFormat.format("Person with pesel: {} exists", employeeDto.getPesel()));
         }
-
-        Set<ConstraintViolation<EmployeeDto>> violations = validator.validate(employeeDto);
-        if (!violations.isEmpty()) {
-            logger.error("Validation error: {}", violations);
-            throw new ConstraintViolationException("Validation error", violations);
-        }
+        validator.validate(employeeDto);
     }
+
     private EmployeeDto parseCsvToDto(String csvLine) throws ParseException {
         String[] fields = csvLine.split(",");
-        if (fields.length < 10 || !"employee".equalsIgnoreCase(fields[0])) {
+        if (fields.length < 10 || !"employee" .equalsIgnoreCase(fields[0])) {
             logger.error("Invalid CSV line for employee: {}", csvLine);
             throw new IllegalArgumentException("Invalid CSV line for employee");
         }
@@ -93,13 +89,13 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
         parameters.put("height", employeeDto.getHeight());
         parameters.put("weight", employeeDto.getWeight());
         parameters.put("email", employeeDto.getEmail());
-        parameters.put("dtype", "Employee");
+        parameters.put("type", "employee");
         parameters.put("employment_date", employeeDto.getEmploymentDate());
         parameters.put("position", employeeDto.getPosition());
         parameters.put("salary", employeeDto.getSalary());
         parameters.put("version", 0L);
 
-        String insertPersonSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, dtype, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :dtype, :version)";
+        String insertPersonSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
         namedParameterJdbcTemplate.update(insertPersonSql, parameters);
 
         Long personId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);

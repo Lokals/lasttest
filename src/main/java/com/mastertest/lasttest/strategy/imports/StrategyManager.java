@@ -1,4 +1,4 @@
-package com.mastertest.lasttest.strategy;
+package com.mastertest.lasttest.strategy.imports;
 
 
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;

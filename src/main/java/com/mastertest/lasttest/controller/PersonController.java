@@ -1,40 +1,38 @@
 package com.mastertest.lasttest.controller;
 
 import com.mastertest.lasttest.configuration.PersonManagementProperties;
+import com.mastertest.lasttest.model.Employee;
 import com.mastertest.lasttest.model.Person;
 import com.mastertest.lasttest.model.SearchCriteria;
-import com.mastertest.lasttest.model.dto.EmployeePositionDto;
 import com.mastertest.lasttest.model.dto.PersonDto;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
-import com.mastertest.lasttest.model.dto.command.UpdateEmployeePositionCommand;
-import com.mastertest.lasttest.model.factory.ImportStatus;
-import com.mastertest.lasttest.model.factory.StatusFile;
-import com.mastertest.lasttest.repository.ImportStatusRepository;
+import com.mastertest.lasttest.model.dto.command.UpdateEmployeeCommand;
+import com.mastertest.lasttest.model.dto.command.UpdatePersonCommand;
 import com.mastertest.lasttest.repository.PersonRepository;
 import com.mastertest.lasttest.search.PersonSearchSpecification;
-import com.mastertest.lasttest.service.employee.EmployeePositionService;
-import com.mastertest.lasttest.service.fileprocess.CsvImportService;
-import com.mastertest.lasttest.service.fileprocess.ImportStatusService;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
-import com.mastertest.lasttest.strategy.StrategyManager;
+import com.mastertest.lasttest.service.person.PersonService;
+import com.mastertest.lasttest.service.person.UpdateStrategy;
+import com.mastertest.lasttest.strategy.imports.StrategyManager;
 
+import com.mastertest.lasttest.strategy.update.UpdateStrategyManager;
+import jakarta.persistence.OptimisticLockException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
@@ -43,16 +41,18 @@ public class PersonController {
 
     private final PersonRepository personRepository;
     private final PersonManagementProperties properties;
-    private final EmployeePositionService employeePositionService;
-    private final CsvImportService csvImportService;
-    private final ImportStatusService importStatusService;
-    private final ImportStatusRepository importStatusRepository;
+    private final PersonService personService;
     private final StrategyManager strategyManager;
+    private final UpdateStrategyManager updateStrategyManager;
+
+    private static final Logger logger = LoggerFactory.getLogger(PersonController.class);
 
     @GetMapping("/search")
     public Page<Person> searchPeople(@RequestParam Map<String, String> allParams, Pageable pageable) {
         Specification<Person> spec = Specification.where(null);
-
+        if (pageable.getPageSize() > properties.getDefaultPageSize()) {
+            pageable = PageRequest.of(pageable.getPageNumber(), properties.getDefaultPageSize(), pageable.getSort());
+        }
         for (Map.Entry<String, String> entry : allParams.entrySet()) {
             String key = entry.getKey();
             String value = entry.getValue();
@@ -60,17 +60,14 @@ public class PersonController {
             if (value.contains(",")) {
                 String[] range = value.split(",");
                 if (range.length == 2) {
-                    SearchCriteria criteriaLower = new SearchCriteria(key, ">=", range[0], null);
-                    SearchCriteria criteriaUpper = new SearchCriteria(key, "<=", null, range[1]);
-                    spec = spec.and(new PersonSearchSpecification(criteriaLower))
-                            .and(new PersonSearchSpecification(criteriaUpper));
+                    SearchCriteria criteriaBetween = new SearchCriteria(key, "between", range[0], range[1]);
+                    spec = spec.and(new PersonSearchSpecification(criteriaBetween));
                 }
             } else {
                 SearchCriteria criteria = new SearchCriteria(key, ":", value, null);
                 spec = spec.and(new PersonSearchSpecification(criteria));
             }
         }
-
         return personRepository.findAll(spec, pageable);
     }
 
@@ -89,38 +86,28 @@ public class PersonController {
         }
     }
 
-//    @PostMapping("/update/{id}")
-//    public ResponseEntity<PersonDto> updatePerson(@PathVariable Long id, @Valid @RequestBody UpdatePersonCommand command) {
-//        try {
-//            PersonDto updatedPerson = personService.update(id, command);
-//            return ResponseEntity.ok(updatedPerson);
-//        } catch (OptimisticLockException e) {
-//            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+    @PostMapping("/update/{id}")
+    public ResponseEntity<?> updatePerson(@PathVariable Long id, @Valid @RequestBody Map<String, Object> commandMap) {
+        try {
+            Person person = personService.getPersonById(id);
+            UpdateStrategy updateStrategy = updateStrategyManager.getUpdateStrategy(person.getType());
+            logger.debug("Selected update strategy: {}", updateStrategy.getClass().getSimpleName());
+            PersonDto personDto = updateStrategy.updateAndValidate(commandMap, person);
+            return ResponseEntity.ok(personDto);
+
+
+//        } else{
+////            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("updateStrategy not found");
 //        }
-//    }
-
-    @PostMapping("/employees/{employeeId}/positions")
-    public ResponseEntity<EmployeePositionDto> updateEmployeePosition(@PathVariable Long employeeId,
-                                                                      @Valid
-                                                                      @RequestBody UpdateEmployeePositionCommand command) {
-        EmployeePositionDto updatedPosition = employeePositionService.updatePositionToEmployee(employeeId, command);
-        return ResponseEntity.ok(updatedPosition);
-    }
-
-
-    @PostMapping("/upload")
-    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file) throws IOException {
-        if (!importStatusRepository.findByStatuses(List.of(StatusFile.INPROGRESS, StatusFile.PENDING)).isEmpty()) {
-            return ResponseEntity.badRequest().body("Already of some import is during processing");
+        } catch (
+                OptimisticLockException e) {
+            logger.error("Entity edited during processing: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e);
+        } catch (
+                Exception e) {
+            logger.error("Issue with processing request: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e);
         }
-        ImportStatus importStatus = importStatusService.createNewImportStatus(file.getOriginalFilename());
-        csvImportService.importCsv(file, importStatus);
-        return ResponseEntity.ok(importStatus.getId());
-    }
 
-    @GetMapping("/importstatus/{id}")
-    public ResponseEntity<ImportStatus> getImportStatus(@PathVariable Long id) {
-        ImportStatus status = importStatusService.getImportStatus(id);
-        return ResponseEntity.ok(status);
     }
 }

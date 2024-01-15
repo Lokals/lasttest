@@ -1,14 +1,13 @@
-package com.mastertest.lasttest.strategy;
+package com.mastertest.lasttest.strategy.imports;
 
 import com.mastertest.lasttest.configuration.ConversionUtils;
 import com.mastertest.lasttest.model.Person;
-import com.mastertest.lasttest.model.dto.EmployeeDto;
 import com.mastertest.lasttest.model.dto.PersonDto;
 import com.mastertest.lasttest.model.dto.RetireeDto;
-import com.mastertest.lasttest.model.dto.StudentDto;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
 import com.mastertest.lasttest.repository.PersonRepository;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
+import com.mastertest.lasttest.validator.PersonValidator;
 import jakarta.persistence.EntityExistsException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -32,7 +31,7 @@ import java.util.Set;
 public class RetireeImportStrategy  implements ImportStrategy<RetireeDto> {
 
 
-    private final Validator validator;
+    private final PersonValidator validator;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     private final JdbcTemplate jdbcTemplate;
     private final PersonRepository personRepository;
@@ -77,12 +76,7 @@ public class RetireeImportStrategy  implements ImportStrategy<RetireeDto> {
             logger.error("Person with pesel: {} exists", retireeDto.getPesel());
             throw new EntityExistsException(MessageFormat.format("Person with pesel: {} exists", retireeDto.getPesel()));
         }
-
-        Set<ConstraintViolation<RetireeDto>> violations = validator.validate(retireeDto);
-        if (!violations.isEmpty()) {
-            logger.error("Validation error: {}", violations);
-            throw new ConstraintViolationException("Validation error", violations);
-        }
+        validator.validate(retireeDto);
     }
 
     private RetireeDto saveRetiree(RetireeDto retireeDto) {
@@ -93,12 +87,12 @@ public class RetireeImportStrategy  implements ImportStrategy<RetireeDto> {
         parameters.put("height", retireeDto.getHeight());
         parameters.put("weight", retireeDto.getWeight());
         parameters.put("email", retireeDto.getEmail());
-        parameters.put("dtype", "retiree");
+        parameters.put("type", "retiree");
         parameters.put("years_worked", retireeDto.getYearsWorked());
         parameters.put("pension_amount", retireeDto.getPensionAmount());
         parameters.put("version", 0L);
 
-        String insertPersonSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, dtype, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :dtype, :version)";
+        String insertPersonSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
         namedParameterJdbcTemplate.update(insertPersonSql, parameters);
 
         Long personId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);

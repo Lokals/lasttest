@@ -25,8 +25,8 @@ public class SecurityConfig  {
                         (authz) -> authz
                                 .requestMatchers("/api/people/add", "/api/people/update/{id}").hasRole("ADMIN")
                                 .requestMatchers("/api/people/search").permitAll()
-                                .requestMatchers("/api/people/employees/{employeeId}/positions").hasAnyRole("ADMIN", "EMPLOYEE")
-                                .requestMatchers("/api/people/upload", "/api/people/importstatus/{id}").hasAnyRole("ADMIN", "IMPORTER")
+                                .requestMatchers("/api/employees/{employeeId}/positions").hasAnyRole("ADMIN", "EMPLOYEE")
+                                .requestMatchers("/api/import/employees", "/api/import/importstatus/{id}").hasAnyRole("ADMIN", "IMPORTER")
                                 .anyRequest().authenticated()
                 )
                 .csrf(AbstractHttpConfigurer::disable)

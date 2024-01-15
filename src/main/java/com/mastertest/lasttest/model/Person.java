@@ -24,4 +24,5 @@ public abstract class Person {
     private Double height;
     private Double weight;
     private String email;
+    private String type;
 }

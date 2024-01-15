@@ -16,6 +16,7 @@
             <column name="weight" valueNumeric="80"/>
             <column name="email" value="jan.kowalski@example.com"/>
             <column name="version" valueNumeric="0"/>
+            <column name="type" value="student"/>
         </insert>
         <insert tableName="person">
             <column name="id" valueNumeric="2"/>
@@ -26,6 +27,7 @@
             <column name="weight" valueNumeric="60"/>
             <column name="email" value="ewa.malinowska@example.com"/>
             <column name="version" valueNumeric="0"/>
+            <column name="type" value="student"/>
 
         </insert>
         <insert tableName="person">
@@ -37,6 +39,7 @@
             <column name="weight" valueNumeric="75"/>
             <column name="email" value="piotr.zajac@example.com"/>
             <column name="version" valueNumeric="0"/>
+            <column name="type" value="student"/>
         </insert>
 
         <insert tableName="person">
@@ -48,6 +51,7 @@
             <column name="weight" valueNumeric="58"/>
             <column name="email" value="marta.wojciechowska@example.com"/>
             <column name="version" valueNumeric="0"/>
+            <column name="type" value="employee"/>
         </insert>
         <insert tableName="person">
             <column name="id" valueNumeric="5"/>
@@ -58,6 +62,7 @@
             <column name="weight" valueNumeric="85"/>
             <column name="email" value="tomasz.szewczyk@example.com"/>
             <column name="version" valueNumeric="0"/>
+            <column name="type" value="employee"/>
         </insert>
         <insert tableName="person">
             <column name="id" valueNumeric="6"/>
@@ -68,6 +73,7 @@
             <column name="weight" valueNumeric="54"/>
             <column name="email" value="katarzyna.baran@example.com"/>
             <column name="version" valueNumeric="0"/>
+            <column name="type" value="employee"/>
         </insert>
 
         <insert tableName="person">
@@ -79,6 +85,7 @@
             <column name="weight" valueNumeric="70"/>
             <column name="email" value="stefan.nowakowski@example.com"/>
             <column name="version" valueNumeric="0"/>
+            <column name="type" value="retiree"/>
 
         </insert>
         <insert tableName="person">
@@ -90,6 +97,7 @@
             <column name="weight" valueNumeric="56"/>
             <column name="email" value="agata.majewska@example.com"/>
             <column name="version" valueNumeric="0"/>
+            <column name="type" value="retiree"/>
 
         </insert>
         <insert tableName="person">
@@ -101,6 +109,7 @@
             <column name="weight" valueNumeric="76"/>
             <column name="email" value="krzysztof.pawlowski@example.com"/>
             <column name="version" valueNumeric="0"/>
+            <column name="type" value="retiree"/>
 
         </insert>
     </changeSet>
