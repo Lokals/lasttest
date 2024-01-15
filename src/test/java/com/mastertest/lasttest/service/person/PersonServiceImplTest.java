@@ -1,8 +1,12 @@
 package com.mastertest.lasttest.service.person;
 
 import com.mastertest.lasttest.model.Person;
+import com.mastertest.lasttest.model.Student;
 import com.mastertest.lasttest.repository.PersonRepository;
 import com.mastertest.lasttest.strategy.update.UpdateStrategyManager;
+import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -11,8 +15,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.hibernate.validator.internal.util.Contracts.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,14 +35,54 @@ class PersonServiceImplTest {
     @Mock
     private UpdateStrategy updateStrategy;
 
-    private Person person;
-    private Map<String, Object> commandMap;
+    private static Student person;
+
+    private static Map<String, Object> commandMap;
 
     @BeforeEach
     void setUp() {
-        person = new Person();
-        commandMap = Map.of();
-        when(updateStrategyManager.getUpdateStrategy(anyString())).thenReturn(updateStrategy);
-        when(personRepository.findById(anyLong())).thenReturn(Optional.of(person));
+        person = new Student();
+        person.setId(1L);
+        person.setFirstName("Test");
+        person.setLastName("Testowy");
+        person.setHeight(180.0);
+        person.setWeight(50.0);
+        person.setEmail("test.testowy@test.com");
+        person.setScholarship(1000.0);
+        person.setYearOfStudy(1);
+        person.setUniversityName("Uniwerek");
+        commandMap = Map.of(
+                "firstName", "Cycek",
+                "lastName", "Bicek",
+                "pesel", "85040612345",
+                "height", 165.0,
+                "weight", 60.0,
+                "email", "cycek.nowak@example.com",
+                "universityName", "Uniwersytet Cyckow",
+                "yearOfStudy", 2,
+                "studyField", "Malarstwo",
+                "scholarship", 901.0
+        );
     }
+
+    @Test
+    void testGetPersonById_ExistingId_ReturnsPerson(){
+        Long personId = 1L;
+        when(personRepository.findById(personId)).thenReturn(Optional.of(person));
+        Person result = personService.getPersonById(personId);
+
+        assertNotNull(result);
+        assertEquals(person, result);
+        verify(personRepository).findById(personId);
+    }
+
+    @Test
+    void testGetPersonById_NonExistingId_ThrowsEntityNotFoundException() {
+        Long personId = 1L;
+        when(personRepository.findById(personId)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class, () -> personService.getPersonById(personId));
+        verify(personRepository).findById(personId);
+    }
+
 }
