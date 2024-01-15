@@ -32,6 +32,8 @@ import java.sql.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -313,5 +315,128 @@ class PersonControllerTest {
                 .andDo(print())
                 .andExpect(status().is5xxServerError())
                 .andExpect(content().string("pesel: PESEL must be exactly 11 characters long\n"));
+    }
+
+
+    @Test
+    @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
+    void testSearch_ResultAllPersonsReturnedSuccessful() throws Exception {
+
+        mockMvc.perform(get("/api/people/search"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(lessThanOrEqualTo(properties.getDefaultPageSize()))));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
+    void testSearch_ByPesel_ResultPersonReturnedSuccessful() throws Exception {
+
+        mockMvc.perform(get("/api/people/search")
+                        .param("pesel", "12345678901"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(lessThanOrEqualTo(properties.getDefaultPageSize()))))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+
+    @Test
+    @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
+    void testSearch_ByType_ResultPersonReturnedSuccessful() throws Exception {
+
+        mockMvc.perform(get("/api/people/search")
+                        .param("type", "employee"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(lessThanOrEqualTo(properties.getDefaultPageSize()))))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
+    void testSearch_ByWeight_ResultPersonReturnedSuccessful() throws Exception {
+
+        mockMvc.perform(get("/api/people/search")
+                        .param("weight", "1,100"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(lessThanOrEqualTo(properties.getDefaultPageSize()))))
+                .andExpect(jsonPath("$.totalElements").value(3));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
+    void testSearch_ByHeight_ResultZeroPersonReturned() throws Exception {
+
+        mockMvc.perform(get("/api/people/search")
+                        .param("height", "1,100"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(lessThanOrEqualTo(properties.getDefaultPageSize()))))
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
+    void testSearch_ByHeight_ResultPersonReturnedSuccessful() throws Exception {
+
+        mockMvc.perform(get("/api/people/search")
+                        .param("height", "100,200"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(lessThanOrEqualTo(properties.getDefaultPageSize()))))
+                .andExpect(jsonPath("$.totalElements").value(3));
+    }
+
+
+    @Test
+    @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
+    void testSearch_ByHeightAndType_ResultPersonReturnedSuccessful() throws Exception {
+
+        mockMvc.perform(get("/api/people/search")
+                        .param("height", "100,200")
+                        .param("type", "employee"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(lessThanOrEqualTo(properties.getDefaultPageSize()))))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
+    void testSearch_ByHeightAndName_ResultZeroPersonReturned() throws Exception {
+
+        mockMvc.perform(get("/api/people/search")
+                        .param("height", "100,200")
+                        .param("firstName", "Jan"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(lessThanOrEqualTo(properties.getDefaultPageSize()))))
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
+    void testSearch_InvalidParamProvided_ResultZeroPersonReturned() throws Exception {
+
+        mockMvc.perform(get("/api/people/search")
+                        .param("test", "100,200")
+                        .param("firstName", "Test"))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
+    void testSearch_ByNameAndHeight_ResultPersonsReturned() throws Exception {
+
+        mockMvc.perform(get("/api/people/search")
+                        .param("height", "100,200")
+                        .param("firstName", "Test"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(lessThanOrEqualTo(properties.getDefaultPageSize()))))
+                .andExpect(jsonPath("$.totalElements").value(3));
     }
 }
