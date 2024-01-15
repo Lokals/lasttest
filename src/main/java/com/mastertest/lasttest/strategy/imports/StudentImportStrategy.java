@@ -46,7 +46,6 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
         return saveStudent(studentDto);
     }
 
-
     private void validateDto(StudentDto studentDto) {
         Optional<Person> personExisting = personRepository.findByPesel(studentDto.getPesel());
         if (personExisting.isPresent()) {

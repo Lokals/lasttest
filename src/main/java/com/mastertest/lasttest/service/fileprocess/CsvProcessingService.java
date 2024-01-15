@@ -2,7 +2,6 @@ package com.mastertest.lasttest.service.fileprocess;
 
 
 import com.mastertest.lasttest.model.factory.ImportStatus;
-import com.mastertest.lasttest.model.factory.StatusFile;
 import com.mastertest.lasttest.strategy.imports.StrategyManager;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
@@ -31,7 +30,6 @@ public class CsvProcessingService {
             strategy.validateParseAndSave(record);
         } catch (Exception e) {
             logger.error("Error processing row number {}: {}", importStatus.getProcessedRows(), e.getMessage());
-            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.FAILED, importStatus.getProcessedRows());
         }
     }
 }
