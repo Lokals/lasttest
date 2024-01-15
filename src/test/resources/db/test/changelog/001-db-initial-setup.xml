@@ -19,7 +19,7 @@
             <column name="height" type="double"/>
             <column name="weight" type="double"/>
             <column name="email" type="varchar(255)"/>
-            <column name="dtype" type="varchar(31)"/>
+            <column name="type" type="varchar(31)"/>
         </createTable>
     </changeSet>
 

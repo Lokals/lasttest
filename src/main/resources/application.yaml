@@ -17,13 +17,6 @@ spring:
 server:
   port: 8080
 
-logging:
-  level:
-    root: DEBUG
-    org:
-      springframework: DEBUG
-      hibernate: DEBUG
-
 person-management:
   default-page-size: 10
   batch-size: 50
