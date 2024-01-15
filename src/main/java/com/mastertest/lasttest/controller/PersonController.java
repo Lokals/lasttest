@@ -1,26 +1,17 @@
 package com.mastertest.lasttest.controller;
 
 import com.mastertest.lasttest.configuration.PersonManagementProperties;
-import com.mastertest.lasttest.model.Employee;
 import com.mastertest.lasttest.model.Person;
-import com.mastertest.lasttest.model.SearchCriteria;
 import com.mastertest.lasttest.model.dto.PersonDto;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
-import com.mastertest.lasttest.model.dto.command.UpdateEmployeeCommand;
-import com.mastertest.lasttest.model.dto.command.UpdatePersonCommand;
 import com.mastertest.lasttest.repository.PersonRepository;
-import com.mastertest.lasttest.search.PersonSearchSpecification;
 import com.mastertest.lasttest.search.SpecificationGenerator;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
 import com.mastertest.lasttest.service.person.PersonService;
-import com.mastertest.lasttest.service.person.UpdateStrategy;
 import com.mastertest.lasttest.strategy.imports.StrategyManager;
-
-import com.mastertest.lasttest.strategy.update.UpdateStrategyManager;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -31,8 +22,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Map;
 
 @RestController

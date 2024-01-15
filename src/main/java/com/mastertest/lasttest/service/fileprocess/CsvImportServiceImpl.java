@@ -5,8 +5,6 @@ import com.mastertest.lasttest.configuration.PersonManagementProperties;
 import com.mastertest.lasttest.model.factory.ImportStatus;
 import com.mastertest.lasttest.model.factory.StatusFile;
 import lombok.AllArgsConstructor;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -15,7 +13,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.io.Reader;
 import java.text.MessageFormat;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;

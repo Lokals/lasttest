@@ -1,10 +1,8 @@
 package com.mastertest.lasttest.service.person;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.mastertest.lasttest.model.*;
+import com.mastertest.lasttest.model.Person;
 import com.mastertest.lasttest.model.dto.PersonDto;
-import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
-import com.mastertest.lasttest.model.dto.command.UpdatePersonCommand;
 import com.mastertest.lasttest.repository.PersonRepository;
 import com.mastertest.lasttest.strategy.update.UpdateStrategyManager;
 import jakarta.persistence.EntityNotFoundException;
@@ -16,10 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.text.MessageFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Map;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +22,6 @@ public class PersonServiceImpl implements PersonService {
     private static final Logger logger = LoggerFactory.getLogger(PersonServiceImpl.class);
     private final UpdateStrategyManager updateStrategyManager;
     private final PersonRepository personRepository;
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
 
     @Override

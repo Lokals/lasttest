@@ -1,6 +1,5 @@
 package com.mastertest.lasttest.validator;
 
-import com.mastertest.lasttest.service.fileprocess.CsvImportServiceImpl;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;

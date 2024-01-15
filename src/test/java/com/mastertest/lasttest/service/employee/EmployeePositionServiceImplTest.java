@@ -16,11 +16,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -56,7 +54,7 @@ class EmployeePositionServiceImplTest {
     }
 
     @Test
-    void updatePositionToEmployee_WithValidData_UpdatesPosition() {
+    void testUpdatePositionToEmployee_WithValidData_UpdatesPosition() {
         when(employeeRepository.findById(anyLong())).thenReturn(Optional.of(employee));
         when(employeePositionRepository.findByPositionName(anyString())).thenReturn(Collections.emptyList());
 
@@ -70,7 +68,7 @@ class EmployeePositionServiceImplTest {
     }
 
     @Test
-    void updatePositionToEmployee_PositionAlreadyOccupied_ThrowsIllegalArgumentException() {
+    void testUpdatePositionToEmployee_PositionAlreadyOccupied_ThrowsIllegalArgumentException() {
         Employee otherEmployee = new Employee();
         otherEmployee.setId(2L);
         EmployeePosition existingPosition = new EmployeePosition();
@@ -87,7 +85,7 @@ class EmployeePositionServiceImplTest {
     }
 
     @Test
-    void updatePositionToEmployee_InvalidDateRange_ThrowsIllegalArgumentException() {
+    void testUpdatePositionToEmployee_InvalidDateRange_ThrowsIllegalArgumentException() {
         command.setEndDate(command.getStartDate().minusDays(1));
 
         when(employeeRepository.findById(anyLong())).thenReturn(Optional.of(employee));
@@ -96,7 +94,7 @@ class EmployeePositionServiceImplTest {
     }
 
     @Test
-    void updatePositionToEmployee_EmployeeNotFound_ThrowsEntityNotFoundException() {
+    void testUpdatePositionToEmployee_EmployeeNotFound_ThrowsEntityNotFoundException() {
         when(employeeRepository.findById(anyLong())).thenReturn(Optional.empty());
 
         assertThrows(EntityNotFoundException.class, () -> employeePositionService.updatePositionToEmployee(1L, command));

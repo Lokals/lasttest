@@ -1,9 +1,10 @@
 package com.mastertest.lasttest.model.dto;
 
 
-import com.mastertest.lasttest.model.Person;
 import jakarta.validation.constraints.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor

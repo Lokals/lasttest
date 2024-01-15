@@ -1,10 +1,13 @@
 package com.mastertest.lasttest.model.dto.command;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.*;
-import lombok.*;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.PositiveOrZero;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
 @Data

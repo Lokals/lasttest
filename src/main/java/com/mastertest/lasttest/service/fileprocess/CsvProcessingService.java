@@ -11,13 +11,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.text.MessageFormat;
-import java.util.Map;
 
 @AllArgsConstructor
 @Service
 public class CsvProcessingService {
     private final ImportStatusService importStatusService;
-    private Map<String, ImportStrategy<?>> strategies;
     private final StrategyManager strategyManager;
 
     private static final Logger logger = LoggerFactory.getLogger(CsvImportServiceImpl.class);

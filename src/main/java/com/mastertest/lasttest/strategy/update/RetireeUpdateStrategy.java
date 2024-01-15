@@ -2,23 +2,17 @@ package com.mastertest.lasttest.strategy.update;
 
 
 import com.mastertest.lasttest.configuration.ConversionUtils;
-import com.mastertest.lasttest.model.Employee;
 import com.mastertest.lasttest.model.Person;
 import com.mastertest.lasttest.model.Retiree;
-import com.mastertest.lasttest.model.Student;
 import com.mastertest.lasttest.model.dto.PersonDto;
 import com.mastertest.lasttest.model.dto.RetireeDto;
-import com.mastertest.lasttest.model.dto.StudentDto;
-import com.mastertest.lasttest.model.dto.command.UpdateEmployeeCommand;
 import com.mastertest.lasttest.model.dto.command.UpdatePersonCommand;
 import com.mastertest.lasttest.model.dto.command.UpdateRetireeCommand;
-import com.mastertest.lasttest.model.dto.command.UpdateStudentCommand;
 import com.mastertest.lasttest.repository.PersonRepository;
 import com.mastertest.lasttest.service.person.UpdateStrategy;
 import com.mastertest.lasttest.validator.PersonValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 

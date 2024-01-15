@@ -1,16 +1,13 @@
 package com.mastertest.lasttest.model.dto.command;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.validator.constraints.Length;
-
-import java.util.Map;
-import java.util.Optional;
 
 @Data
 @SuperBuilder
@@ -31,7 +28,5 @@ public class UpdatePersonCommand {
     protected Double weight;
     @Email
     protected String email;
-//    @Valid
-//    private T details;
 
 }
