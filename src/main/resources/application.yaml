@@ -13,6 +13,10 @@ spring:
     change-log: classpath:db/db.changelog-master.xml
     enabled: true
     drop-first: true
+  servlet:
+    multipart:
+      max-file-size: 10000MB
+      max-request-size: 10000MB
 
 server:
   port: 8080
