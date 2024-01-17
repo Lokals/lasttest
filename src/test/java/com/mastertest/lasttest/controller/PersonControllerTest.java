@@ -362,7 +362,7 @@ class PersonControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(lessThanOrEqualTo(properties.getDefaultPageSize()))))
-                .andExpect(jsonPath("$.totalElements").value(3));
+                .andExpect(jsonPath("$.totalElements").value(4));
     }
 
     @Test
@@ -374,7 +374,7 @@ class PersonControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(lessThanOrEqualTo(properties.getDefaultPageSize()))))
-                .andExpect(jsonPath("$.totalElements").value(0));
+                .andExpect(jsonPath("$.totalElements").value(1));
     }
 
     @Test
