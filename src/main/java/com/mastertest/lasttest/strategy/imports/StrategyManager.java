@@ -5,6 +5,7 @@ import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -27,5 +28,9 @@ public class StrategyManager {
 
     public ImportStrategy<?> getStrategy(String type) {
         return strategyMap.get(type.toLowerCase());
+    }
+
+    public Collection<ImportStrategy<?>> getAllStrategies() {
+        return strategyMap.values();
     }
 }

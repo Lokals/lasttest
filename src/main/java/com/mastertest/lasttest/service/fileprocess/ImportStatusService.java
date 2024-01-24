@@ -34,8 +34,7 @@ public class ImportStatusService {
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void updateImportStatus(Long id, StatusFile status, Long processedRows) {
         logger.info("Updating import status for id: {} to {}", id, status);
-        ImportStatus importStatus = importStatusRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("ImportStatus not found with id " + id));
+        ImportStatus importStatus = getImportStatus(id);
         importStatus.setStatus(status);
         importStatus.setProcessedRows(processedRows);
         if (status == StatusFile.COMPLETED || status == StatusFile.FAILED) {
@@ -44,6 +43,11 @@ public class ImportStatusService {
         importStatusRepository.save(importStatus);
         logger.debug("Import status updated for id: {}", id);
 
+    }
+
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public Long getRowsImportStatus(Long id) {
+        return importStatusRepository.findProcessedRowsById(id);
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)

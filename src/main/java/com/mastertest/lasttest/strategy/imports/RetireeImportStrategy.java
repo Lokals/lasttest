@@ -5,7 +5,10 @@ import com.mastertest.lasttest.model.Person;
 import com.mastertest.lasttest.model.dto.PersonDto;
 import com.mastertest.lasttest.model.dto.RetireeDto;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
+import com.mastertest.lasttest.model.factory.ImportStatus;
+import com.mastertest.lasttest.model.factory.StatusFile;
 import com.mastertest.lasttest.repository.PersonRepository;
+import com.mastertest.lasttest.service.fileprocess.ImportStatusService;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
 import com.mastertest.lasttest.validator.PersonValidator;
 import jakarta.persistence.EntityExistsException;
@@ -18,20 +21,21 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.text.ParseException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Component
-public class RetireeImportStrategy  implements ImportStrategy<RetireeDto> {
+public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
 
 
     private final PersonValidator validator;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     private final JdbcTemplate jdbcTemplate;
     private final PersonRepository personRepository;
+    private final ImportStatusService importStatusService;
     private static final Logger logger = LoggerFactory.getLogger(RetireeImportStrategy.class);
+    private ThreadLocal<List<RetireeDto>> threadLocalBatch = ThreadLocal.withInitial(ArrayList::new);
 
 
     @Override
@@ -48,9 +52,72 @@ public class RetireeImportStrategy  implements ImportStrategy<RetireeDto> {
         return saveRetiree(retireeDto);
     }
 
+    @Override
+    public void addToBatch(String record) throws ParseException {
+        List<RetireeDto> batchList = threadLocalBatch.get();
+        RetireeDto retireeDto = parseCsvToDto(record);
+        validateDto(retireeDto);
+        batchList.add(retireeDto);
+
+    }
+
+    @Override
+    public void processBatch(ImportStatus importStatus) {
+        List<RetireeDto> batchList = threadLocalBatch.get();
+        List<Map<String, Object>> personBatch = new ArrayList<>();
+        for (RetireeDto retiree : batchList) {
+            Map<String, Object> personParams = new HashMap<>();
+            personParams.put("pesel", retiree.getPesel());
+            personParams.put("first_name", retiree.getFirstName());
+            personParams.put("last_name", retiree.getLastName());
+            personParams.put("height", retiree.getHeight());
+            personParams.put("weight", retiree.getWeight());
+            personParams.put("email", retiree.getEmail());
+            personParams.put("type", "retiree");
+            personParams.put("version", 0L);
+            personBatch.add(personParams);
+        }
+        String personSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
+        namedParameterJdbcTemplate.batchUpdate(personSql, personBatch.toArray(new Map[0]));
+
+//                Map<String, Long> peselToIdMap = new HashMap<>();
+//                for (RetireeDto retiree : batchList) {
+//                    Long personId = jdbcTemplate.queryForObject("SELECT id FROM person WHERE pesel = ?", Long.class, retiree.getPesel());
+//                    peselToIdMap.put(retiree.getPesel(), personId);
+//                }
+        String idRetrievalSql = "SELECT id, pesel FROM person WHERE pesel IN (:pesels)";
+        Map<String, Long> peselToIdMap = namedParameterJdbcTemplate.query(idRetrievalSql,
+                Collections.singletonMap("pesels", batchList.stream().map(RetireeDto::getPesel).collect(Collectors.toSet())),
+                rs -> {
+                    Map<String, Long> map = new HashMap<>();
+                    while (rs.next()) {
+                        map.put(rs.getString("pesel"), rs.getLong("id"));
+                    }
+                    return map;
+                });
+
+
+        List<Map<String, Object>> retireeBatch = new ArrayList<>();
+        for (RetireeDto retiree : batchList) {
+            Long personId = peselToIdMap.get(retiree.getPesel());
+            Map<String, Object> params = new HashMap<>();
+            params.put("id", personId);
+            params.put("pension_amount", retiree.getPensionAmount());
+            params.put("years_worked", retiree.getYearsWorked());
+            retireeBatch.add(params);
+        }
+
+        String sql = "INSERT INTO retiree (id, pension_amount, years_worked) VALUES (:id, :pension_amount, :years_worked)";
+        namedParameterJdbcTemplate.batchUpdate(sql, retireeBatch.toArray(new Map[0]));
+        importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
+
+        batchList.clear();
+    }
+
+
     private RetireeDto parseCsvToDto(String csvLine) throws ParseException {
         String[] fields = csvLine.split(",");
-        if (fields.length < 9 || !"retiree".equalsIgnoreCase(fields[0])) {
+        if (fields.length < 9 || !"retiree" .equalsIgnoreCase(fields[0])) {
             logger.error("Invalid CSV line for retiree: {}", csvLine);
             throw new IllegalArgumentException("Invalid CSV line for retiree");
         }
@@ -68,7 +135,7 @@ public class RetireeImportStrategy  implements ImportStrategy<RetireeDto> {
 
     private void validateDto(RetireeDto retireeDto) {
         Optional<Person> personExisting = personRepository.findByPesel(retireeDto.getPesel());
-        if  (personExisting.isPresent()){
+        if (personExisting.isPresent()) {
             logger.error("Person with pesel: {} exists", retireeDto.getPesel());
             throw new EntityExistsException(MessageFormat.format("Person with pesel: {} exists", retireeDto.getPesel()));
         }

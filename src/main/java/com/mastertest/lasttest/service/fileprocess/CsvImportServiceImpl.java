@@ -12,8 +12,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
-import java.text.MessageFormat;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
@@ -26,30 +30,34 @@ public class CsvImportServiceImpl implements CsvImportService {
     private final CsvProcessingService csvProcessingService;
     private final PersonManagementProperties properties;
 
-    @Async
+
+    @Async("fileProcessingExecutor")
     public void importCsv(MultipartFile file, ImportStatus importStatus) {
         AtomicLong processedRows = new AtomicLong(0);
-        try (Stream<String> lines = new BufferedReader(new InputStreamReader(file.getInputStream())).lines()) {
-            logger.info(MessageFormat.format("CSV file {0} processing started", file.getOriginalFilename()));
-            lines.peek(line -> {
-                if (processedRows.incrementAndGet() % properties.getBatchSize() == 0) {
-                    logger.debug("Processing batch at row number: {}", processedRows.get());
-                    importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, processedRows.get());
-                }
-            }).forEach(record -> {
-                String[] fields = record.split(",");
-                if (fields.length > 0){
-                    String type = fields[0];
-                    csvProcessingService.processRecords(record,type, importStatus);
-            }
-            });
-
-            logger.info("Completed processing file: {}, total rows processed: {}", importStatus.getFilename(), processedRows.get());
-            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.COMPLETED, processedRows.get());
-
-        } catch (Exception e) {
-            logger.error("Improting CSV failed", e);
+        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        try (Stream<String> lines = new BufferedReader(new InputStreamReader(file.getInputStream())).lines().parallel()) {
+            lines.forEach(record -> executor.submit(new LineProcessingTask(record, csvProcessingService, importStatus, properties.getBatchSize(), processedRows)));
+        } catch (IOException e) {
+            logger.error("Importing CSV failed with error message: ", e);
             importStatusService.updateImportStatus(importStatus.getId(), StatusFile.FAILED, processedRows.get());
+            return;
         }
+
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(120, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+        }
+
+        List<String> remainingRecords = LineProcessingTask.getRemainingRecords();
+        if (!remainingRecords.isEmpty()) {
+            csvProcessingService.processBatch(remainingRecords, importStatus);
+            processedRows.addAndGet(remainingRecords.size());
+        }
+
+        importStatusService.updateImportStatus(importStatus.getId(), StatusFile.COMPLETED, processedRows.get());
     }
 }
