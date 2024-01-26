@@ -23,10 +23,10 @@ public class SecurityConfig  {
         http
                 .authorizeRequests(
                         (authz) -> authz
-                                .requestMatchers("/api/people/add", "/api/people/update/{id}").hasRole("ADMIN")
+                                .requestMatchers("/api/people/add", "/api/people/{id}/update").hasRole("ADMIN")
                                 .requestMatchers("/api/people/search").permitAll()
                                 .requestMatchers("/api/employees/{employeeId}/positions").hasAnyRole("ADMIN", "EMPLOYEE")
-                                .requestMatchers("/api/import/employees", "/api/import/importstatus/{id}").hasAnyRole("ADMIN", "IMPORTER")
+                                .requestMatchers("/api/import/employees", "/api/import/{id}/importstatus").hasAnyRole("ADMIN", "IMPORTER")
                                 .anyRequest().authenticated()
                 )
                 .csrf(AbstractHttpConfigurer::disable)

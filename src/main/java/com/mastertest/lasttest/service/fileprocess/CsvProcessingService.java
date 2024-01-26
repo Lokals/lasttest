@@ -34,6 +34,7 @@ public class CsvProcessingService {
         }
     }
 
+
     @Transactional
     public void processBatch(List<String> batch, ImportStatus importStatus) {
         batch.forEach(record -> {
@@ -45,7 +46,7 @@ public class CsvProcessingService {
                     strategy.addToBatch(record);
                 }
             } catch (Exception e) {
-                logger.error("Error processing row number {}: {}", importStatus.getProcessedRows(), e.getMessage());
+                logger.error("Error processing row number {}: {}", importStatus.getProcessedRows(), e);
             }
         });
         logger.info("Processing bath!!");

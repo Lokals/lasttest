@@ -44,13 +44,13 @@ public class CsvImportServiceImpl implements CsvImportService {
         }
 
         executor.shutdown();
-        while (!executor.isTerminated()) {
-            try {
+        try {
+            while (!executor.isTerminated()) {
                 executor.awaitTermination(5, TimeUnit.MINUTES);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                executor.shutdownNow();
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            executor.shutdownNow();
         }
 
         List<String> remainingRecords = LineProcessingTask.getRemainingRecords();

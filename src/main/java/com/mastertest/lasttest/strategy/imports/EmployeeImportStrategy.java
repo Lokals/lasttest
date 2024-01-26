@@ -10,6 +10,7 @@ import com.mastertest.lasttest.model.factory.StatusFile;
 import com.mastertest.lasttest.repository.PersonRepository;
 import com.mastertest.lasttest.service.fileprocess.ImportStatusService;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
+import com.mastertest.lasttest.service.person.PersonEmployeeService;
 import com.mastertest.lasttest.validator.PersonValidator;
 import jakarta.persistence.EntityExistsException;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,6 @@ import org.springframework.stereotype.Component;
 import java.text.MessageFormat;
 import java.text.ParseException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Component
@@ -35,6 +35,7 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
     private final JdbcTemplate jdbcTemplate;
     private final PersonRepository personRepository;
     private final ImportStatusService importStatusService;
+    private final PersonEmployeeService employeeService;
     private static final Logger logger = LoggerFactory.getLogger(EmployeeImportStrategy.class);
     private static final DateParser DATE_PARSER = FastDateFormat.getInstance("yyyy-MM-dd");
     private ThreadLocal<List<EmployeeDto>> threadLocalBatch = ThreadLocal.withInitial(ArrayList::new);
@@ -63,55 +64,16 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
     }
 
 
+
     @Override
     public void processBatch(ImportStatus importStatus) {
         List<EmployeeDto> batchList = threadLocalBatch.get();
             if (!batchList.isEmpty()) {
-                List<Map<String, Object>> personBatch = new ArrayList<>();
-                for (EmployeeDto employee : batchList) {
-                    Map<String, Object> personParams = new HashMap<>();
-                    personParams.put("pesel", employee.getPesel());
-                    personParams.put("first_name", employee.getFirstName());
-                    personParams.put("last_name", employee.getLastName());
-                    personParams.put("height", employee.getHeight());
-                    personParams.put("weight", employee.getWeight());
-                    personParams.put("email", employee.getEmail());
-                    personParams.put("type", "employee");
-                    personParams.put("version", 0L);
-                    personBatch.add(personParams);
-                }
-                String personSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
-                namedParameterJdbcTemplate.batchUpdate(personSql, personBatch.toArray(new Map[0]));
-
-                String idRetrievalSql = "SELECT id, pesel FROM person WHERE pesel IN (:pesels)";
-                Map<String, Long> peselToIdMap = namedParameterJdbcTemplate.query(idRetrievalSql,
-                        Collections.singletonMap("pesels", batchList.stream().map(EmployeeDto::getPesel).collect(Collectors.toSet())),
-                        rs -> {
-                            Map<String, Long> map = new HashMap<>();
-                            while (rs.next()) {
-                                map.put(rs.getString("pesel"), rs.getLong("id"));
-                            }
-                            return map;
-                        });
-
-
-                List<Map<String, Object>> employeeBatch = new ArrayList<>();
-                for (EmployeeDto employee : batchList) {
-                    Long personId = peselToIdMap.get(employee.getPesel());
-                    Map<String, Object> employeeParams = new HashMap<>();
-                    employeeParams.put("id", personId);
-                    employeeParams.put("employment_date", employee.getEmploymentDate());
-                    employeeParams.put("position", employee.getPosition());
-                    employeeParams.put("salary", employee.getSalary());
-                    employeeBatch.add(employeeParams);
-                }
-
-                String sql = "INSERT INTO employee (id, employment_date, position, salary) VALUES (:id, :employment_date, :position, :salary)";
-                namedParameterJdbcTemplate.batchUpdate(sql, employeeBatch.toArray(new Map[0]));
-
+                employeeService.savePersonsAndEmployee(batchList);
                 importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
-                batchList.clear();
+
             }
+
         }
 
 

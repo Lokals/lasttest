@@ -3,6 +3,7 @@ package com.mastertest.lasttest.common;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.OptimisticLockException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -56,6 +57,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(JsonMappingException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ExceptionDto handleJsonMappingException(JsonMappingException exception) {
+        return new ExceptionDto(exception.getMessage());
+    }
+
+    @ExceptionHandler(FileProcessingException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ExceptionDto handleFileProcessingException(FileProcessingException exception) {
+        return new ExceptionDto(exception.getMessage());
+    }
+
+    @ExceptionHandler(UnknownEntityTypeException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ExceptionDto handleUnknownEntityTypeException(UnknownEntityTypeException exception) {
+        return new ExceptionDto(exception.getMessage());
+    }
+
+
+    @ExceptionHandler(OptimisticLockException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ExceptionDto handleOptimisticLockException(OptimisticLockException exception) {
         return new ExceptionDto(exception.getMessage());
     }
 }

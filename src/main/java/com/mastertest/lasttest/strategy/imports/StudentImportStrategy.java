@@ -10,6 +10,7 @@ import com.mastertest.lasttest.model.factory.StatusFile;
 import com.mastertest.lasttest.repository.PersonRepository;
 import com.mastertest.lasttest.service.fileprocess.ImportStatusService;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
+import com.mastertest.lasttest.service.person.PersonStudentService;
 import com.mastertest.lasttest.validator.PersonValidator;
 import jakarta.persistence.EntityExistsException;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,6 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Component
@@ -36,6 +36,7 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
     private final JdbcTemplate jdbcTemplate;
     private final PersonRepository personRepository;
     private final ImportStatusService importStatusService;
+    private final PersonStudentService personStudentService;
 
     private static final Logger logger = LoggerFactory.getLogger(StudentImportStrategy.class);
     private ThreadLocal<List<StudentDto>> threadLocalBatch = ThreadLocal.withInitial(ArrayList::new);
@@ -67,51 +68,9 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
     public void processBatch(ImportStatus importStatus) {
         List<StudentDto> batchList = threadLocalBatch.get();
         if (!batchList.isEmpty()) {
-            logger.info("BATH SIZE!!! {}", batchList.size());
-            List<Map<String, Object>> personBatch = new ArrayList<>();
-            for (StudentDto student : batchList) {
-                Map<String, Object> personParams = new HashMap<>();
-                personParams.put("pesel", student.getPesel());
-                personParams.put("first_name", student.getFirstName());
-                personParams.put("last_name", student.getLastName());
-                personParams.put("height", student.getHeight());
-                personParams.put("weight", student.getWeight());
-                personParams.put("email", student.getEmail());
-                personParams.put("type", "student");
-                personParams.put("version", 0L);
-                personBatch.add(personParams);
-            }
-            String personSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
-            namedParameterJdbcTemplate.batchUpdate(personSql, personBatch.toArray(new Map[0]));
-            String idRetrievalSql = "SELECT id, pesel FROM person WHERE pesel IN (:pesels)";
-            Map<String, Long> peselToIdMap = namedParameterJdbcTemplate.query(idRetrievalSql,
-                    Collections.singletonMap("pesels", batchList.stream().map(StudentDto::getPesel).collect(Collectors.toSet())),
-                    rs -> {
-                        Map<String, Long> map = new HashMap<>();
-                        while (rs.next()) {
-                            map.put(rs.getString("pesel"), rs.getLong("id"));
-                        }
-                        return map;
-                    });
-
-
-            List<Map<String, Object>> studentBatch = new ArrayList<>();
-            for (StudentDto student : batchList) {
-                Long personId = peselToIdMap.get(student.getPesel());
-                Map<String, Object> studentParams = new HashMap<>();
-                studentParams.put("id", personId);
-                studentParams.put("university_name", student.getUniversityName());
-                studentParams.put("year_of_study", student.getYearOfStudy());
-                studentParams.put("study_field", student.getStudyField());
-                studentParams.put("scholarship", student.getScholarship());
-                studentBatch.add(studentParams);
-            }
-
-            String studentSql = "INSERT INTO student (id, university_name, year_of_study, study_field, scholarship) VALUES (:id, :university_name, :year_of_study, :study_field, :scholarship)";
-            namedParameterJdbcTemplate.batchUpdate(studentSql, studentBatch.toArray(new Map[0]));
+            personStudentService.savePersonsAndStudents(batchList);
             importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
 
-            batchList.clear();
         }
     }
 

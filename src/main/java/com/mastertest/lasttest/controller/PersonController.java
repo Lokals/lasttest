@@ -1,5 +1,6 @@
 package com.mastertest.lasttest.controller;
 
+import com.mastertest.lasttest.common.UnknownEntityTypeException;
 import com.mastertest.lasttest.configuration.PersonManagementProperties;
 import com.mastertest.lasttest.model.Person;
 import com.mastertest.lasttest.model.dto.PersonDto;
@@ -52,7 +53,7 @@ public class PersonController {
     public ResponseEntity<?> addPerson(@Valid @RequestBody CreatePersonCommand<?> command) {
         ImportStrategy<?> strategy = strategyManager.getStrategy(command.getType());
         if (strategy == null) {
-            return ResponseEntity.badRequest().body("Unknown person type: " + command.getType());
+            throw new UnknownEntityTypeException("Unknown person type: " + command.getType());
         }
         try {
             PersonDto createdPerson = strategy.validateAndSave(command);
@@ -62,14 +63,14 @@ public class PersonController {
         }
     }
 
-    @PostMapping("/update/{id}")
+    @PostMapping("/{id}/update")
     public ResponseEntity<?> updatePerson(@PathVariable Long id, @Valid @RequestBody Map<String, Object> commandMap) {
         try {
             PersonDto personDto = personService.updatePerson(id, commandMap);
             return ResponseEntity.ok(personDto);
         } catch (OptimisticLockException e) {
             logger.error("Entity edited during processing: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+            throw new OptimisticLockException("Entity edited during processing");
         } catch (
                 Exception e) {
             logger.error("Issue with processing request: {}", e.getMessage());

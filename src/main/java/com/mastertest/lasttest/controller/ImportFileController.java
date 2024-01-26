@@ -1,6 +1,7 @@
 package com.mastertest.lasttest.controller;
 
 
+import com.mastertest.lasttest.common.FileProcessingException;
 import com.mastertest.lasttest.model.factory.ImportStatus;
 import com.mastertest.lasttest.model.factory.StatusFile;
 import com.mastertest.lasttest.repository.ImportStatusRepository;
@@ -26,16 +27,16 @@ public class ImportFileController {
 
 
     @PostMapping("/employees")
-    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file) throws IOException {
+    public ResponseEntity<ImportStatus> uploadFile(@RequestParam("file") MultipartFile file) throws IOException {
         if (!importStatusRepository.findByStatuses(List.of(StatusFile.INPROGRESS, StatusFile.PENDING)).isEmpty()) {
-            return ResponseEntity.badRequest().body("Already of some import is during processing");
+            throw new FileProcessingException("Already of some import is during processing");
         }
         ImportStatus importStatus = importStatusService.createNewImportStatus(file.getOriginalFilename());
         csvImportService.importCsv(file, importStatus);
-        return ResponseEntity.ok(importStatus.getId());
+        return ResponseEntity.ok(importStatusService.getImportStatus(importStatus.getId()));
     }
 
-    @GetMapping("/importstatus/{id}")
+    @GetMapping("{id}/importstatus")
     public ResponseEntity<ImportStatus> getImportStatus(@PathVariable Long id) {
         ImportStatus status = importStatusService.getImportStatus(id);
         return ResponseEntity.ok(status);
