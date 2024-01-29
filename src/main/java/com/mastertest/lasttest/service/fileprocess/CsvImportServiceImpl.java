@@ -4,6 +4,7 @@ package com.mastertest.lasttest.service.fileprocess;
 import com.mastertest.lasttest.configuration.PersonManagementProperties;
 import com.mastertest.lasttest.model.factory.ImportStatus;
 import com.mastertest.lasttest.model.factory.StatusFile;
+import com.mastertest.lasttest.strategy.imports.StrategyManager;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,12 +15,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Stream;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @AllArgsConstructor
 @Service
@@ -29,36 +28,66 @@ public class CsvImportServiceImpl implements CsvImportService {
     private final ImportStatusService importStatusService;
     private final CsvProcessingService csvProcessingService;
     private final PersonManagementProperties properties;
+    private final StrategyManager strategyManager;
 
+    private final Executor fileProcessingExecutor;
+
+
+
+//    @Async("fileProcessingExecutor")
+//    public void importCsv(MultipartFile file, ImportStatus importStatus) {
+//
+//        try (Stream<String> lines = new BufferedReader(new InputStreamReader(file.getInputStream())).lines()) {
+//            lines.forEach(record -> csvProcessingService.processRecords(record, importStatus));
+//        } catch (IOException e) {
+//            logger.error("Importing CSV failed with error message: ", e);
+//            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.FAILED, importStatusService.getRowsImportStatus(importStatus.getId()));
+//        }
+//
+//        strategyManager.getAllStrategies().forEach(strategy -> {
+//            if (strategy.getBatchSize() != 0) {
+//                strategy.processBatch(importStatus);
+//            }
+//        });
+//        importStatusService.updateImportStatus(importStatus.getId(), StatusFile.COMPLETED, importStatusService.getRowsImportStatus(importStatus.getId()));
+//    }
 
     @Async("fileProcessingExecutor")
     public void importCsv(MultipartFile file, ImportStatus importStatus) {
-        AtomicLong processedRows = new AtomicLong(0);
-        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-        try (Stream<String> lines = new BufferedReader(new InputStreamReader(file.getInputStream())).lines().parallel()) {
-            lines.forEach(record -> executor.submit(new LineProcessingTask(record, csvProcessingService, importStatus, properties.getBatchSize(), processedRows)));
-        } catch (IOException e) {
-            logger.error("Importing CSV failed with error message: ", e);
-            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.FAILED, processedRows.get());
-            return;
-        }
+        final int CHUNK_SIZE = properties.getBatchSize();
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-        executor.shutdown();
-        try {
-            while (!executor.isTerminated()) {
-                executor.awaitTermination(5, TimeUnit.MINUTES);
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+            List<String> chunk = new ArrayList<>();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                chunk.add(line);
+                if (chunk.size() == CHUNK_SIZE) {
+                    CompletableFuture<Void> future = processChunkAsync(new ArrayList<>(chunk), importStatus);
+                    futures.add(future);
+                    chunk.clear();
+                }
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            executor.shutdownNow();
+            if (!chunk.isEmpty()) {
+                CompletableFuture<Void> future = processChunkAsync(chunk, importStatus);
+                futures.add(future);
+            }
+
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        } catch (IOException e) {
+            logger.error("Error reading the file: ", e);
         }
 
-        List<String> remainingRecords = LineProcessingTask.getRemainingRecords();
-        if (!remainingRecords.isEmpty()) {
-            csvProcessingService.processBatch(remainingRecords, importStatus);
-            processedRows.addAndGet(remainingRecords.size());
-        }
-
-        importStatusService.updateImportStatus(importStatus.getId(), StatusFile.COMPLETED, processedRows.get());
+        importStatusService.updateImportStatus(importStatus.getId(), StatusFile.COMPLETED, importStatusService.getRowsImportStatus(importStatus.getId()));
     }
+
+    private CompletableFuture<Void> processChunkAsync(List<String> chunk, ImportStatus importStatus) {
+
+        return CompletableFuture.runAsync(() -> {
+            for (String record : chunk) {
+                csvProcessingService.processRecords(record, importStatus);
+            }
+        }, fileProcessingExecutor);
+    }
+
 }

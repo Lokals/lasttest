@@ -1,6 +1,7 @@
 package com.mastertest.lasttest.strategy.imports;
 
 import com.mastertest.lasttest.configuration.ConversionUtils;
+import com.mastertest.lasttest.model.Employee;
 import com.mastertest.lasttest.model.Person;
 import com.mastertest.lasttest.model.dto.EmployeeDto;
 import com.mastertest.lasttest.model.dto.PersonDto;
@@ -24,7 +25,11 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.text.ParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @RequiredArgsConstructor
 @Component
@@ -38,14 +43,18 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
     private final PersonEmployeeService employeeService;
     private static final Logger logger = LoggerFactory.getLogger(EmployeeImportStrategy.class);
     private static final DateParser DATE_PARSER = FastDateFormat.getInstance("yyyy-MM-dd");
-    private ThreadLocal<List<EmployeeDto>> threadLocalBatch = ThreadLocal.withInitial(ArrayList::new);
+    private final CopyOnWriteArrayList<Employee> batchList = new CopyOnWriteArrayList<>();
 
+    @Override
+    public Long getBatchSize() {
+        return (long) batchList.size();
+    }
 
     @Override
     public void validateParseAndSave(String record) throws ParseException {
-        EmployeeDto employeeDto = parseCsvToDto(record);
-        validateDto(employeeDto);
-        saveEmployee(employeeDto);
+        Employee employeeDto = parseCsvToDto(record);
+        validate(employeeDto);
+//        saveEmployee(employeeDto);
     }
 
     @Override
@@ -57,53 +66,65 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
 
     @Override
     public void addToBatch(String record) throws ParseException {
-        List<EmployeeDto> batch = threadLocalBatch.get();
-        EmployeeDto employeeDto = parseCsvToDto(record);
-        validateDto(employeeDto);
-        batch.add(employeeDto);
-    }
+        Employee employee = parseCsvToDto(record);
+        validate(employee);
+        batchList.add(employee);
 
+    }
 
 
     @Override
     public void processBatch(ImportStatus importStatus) {
-        List<EmployeeDto> batchList = threadLocalBatch.get();
+        synchronized (batchList) {
             if (!batchList.isEmpty()) {
-                employeeService.savePersonsAndEmployee(batchList);
+                logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
+                employeeService.savePersonsAndEmployee(new ArrayList<>(batchList));
                 importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
 
             }
-
+            batchList.clear();
         }
-
-
-
-    private void validateDto(EmployeeDto employeeDto) {
-        Optional<Person> personExisting = personRepository.findByPesel(employeeDto.getPesel());
-        if (personExisting.isPresent()) {
-            logger.error("Person with pesel: {} exists", employeeDto.getPesel());
-            throw new EntityExistsException(MessageFormat.format("Person with pesel: {} exists", employeeDto.getPesel()));
-        }
-        validator.validate(employeeDto);
     }
 
-    private EmployeeDto parseCsvToDto(String csvLine) throws ParseException {
+
+    private void validate(Employee employee) {
+        Optional<Person> personExisting = personRepository.findByPesel(employee.getPesel());
+        if (personExisting.isPresent()) {
+            logger.error("Person with pesel: {} exists", employee.getPesel());
+            throw new EntityExistsException(MessageFormat.format("Person with pesel: {} exists", employee.getPesel()));
+        }
+        validator.validate(employee);
+    }
+
+    private void validateDto(EmployeeDto employee) {
+        Optional<Person> personExisting = personRepository.findByPesel(employee.getPesel());
+        if (personExisting.isPresent()) {
+            logger.error("Person with pesel: {} exists", employee.getPesel());
+            throw new EntityExistsException(MessageFormat.format("Person with pesel: {} exists", employee.getPesel()));
+        }
+        validator.validate(employee);
+    }
+
+    private Employee parseCsvToDto(String csvLine) throws ParseException {
+        logger.debug("EMPLOYEE LIST: {}", csvLine);
         String[] fields = csvLine.split(",");
         if (fields.length < 10 || !"employee" .equalsIgnoreCase(fields[0])) {
             logger.error("Invalid CSV line for employee: {}", csvLine);
             throw new IllegalArgumentException("Invalid CSV line for employee");
         }
-        return EmployeeDto.builder()
-                .firstName(fields[1])
-                .lastName(fields[2])
-                .pesel(fields[3])
-                .height(Double.parseDouble(fields[4]))
-                .weight(Double.parseDouble(fields[5]))
-                .email(fields[6])
-                .employmentDate(DATE_PARSER.parse(fields[7]))
-                .position(fields[8])
-                .salary(Double.parseDouble(fields[9]))
-                .build();
+        logger.debug("EMPLOYEE LIST: {}", fields);
+        Employee employee = new Employee();
+        employee.setFirstName(fields[1]);
+        employee.setLastName(fields[2]);
+        employee.setPesel(fields[3]);
+        employee.setHeight(Double.parseDouble(fields[4]));
+        employee.setWeight(Double.parseDouble(fields[5]));
+        employee.setEmail(fields[6]);
+        employee.setType("employee");
+        employee.setEmploymentDate(DATE_PARSER.parse(fields[7]));
+        employee.setPosition(fields[8]);
+        employee.setSalary(Double.parseDouble(fields[9]));
+        return employee;
     }
 
     private EmployeeDto saveEmployee(EmployeeDto employeeDto) {

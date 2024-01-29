@@ -5,7 +5,7 @@ spring:
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -23,4 +23,4 @@ server:
 
 person-management:
   default-page-size: 10
-  batch-size: 1500
+  batch-size: 5000

@@ -2,6 +2,7 @@ package com.mastertest.lasttest.strategy.imports;
 
 import com.mastertest.lasttest.configuration.ConversionUtils;
 import com.mastertest.lasttest.model.Person;
+import com.mastertest.lasttest.model.Student;
 import com.mastertest.lasttest.model.dto.PersonDto;
 import com.mastertest.lasttest.model.dto.StudentDto;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @RequiredArgsConstructor
 @Component
@@ -39,13 +41,21 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
     private final PersonStudentService personStudentService;
 
     private static final Logger logger = LoggerFactory.getLogger(StudentImportStrategy.class);
-    private ThreadLocal<List<StudentDto>> threadLocalBatch = ThreadLocal.withInitial(ArrayList::new);
+    //    private List<Student> batchList = Collections.synchronizedList(new ArrayList<>());
+    private final CopyOnWriteArrayList<Student> batchList = new CopyOnWriteArrayList<>();
+
+    @Override
+    public Long getBatchSize() {
+        return (long) batchList.size();
+
+
+    }
 
     @Override
     public void validateParseAndSave(String record) {
-        StudentDto studentDto = parseCsvToDto(record);
-        validateDto(studentDto);
-        saveStudent(studentDto);
+        Student student = parseCsvToDto(record);
+        validate(student);
+//        saveStudent(studentDto);
     }
 
     @Override
@@ -57,23 +67,37 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
 
     @Override
     public void addToBatch(String record) {
-        List<StudentDto> batchList = threadLocalBatch.get();
-        StudentDto studentDto = parseCsvToDto(record);
-        validateDto(studentDto);
-        batchList.add(studentDto);
+
+        Student student = parseCsvToDto(record);
+        validate(student);
+        batchList.add(student);
+
 
     }
 
     @Override
     public void processBatch(ImportStatus importStatus) {
-        List<StudentDto> batchList = threadLocalBatch.get();
-        if (!batchList.isEmpty()) {
-            personStudentService.savePersonsAndStudents(batchList);
-            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
+        synchronized (batchList) {
 
+            if (!batchList.isEmpty()) {
+                logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
+                personStudentService.savePersonsAndStudents(new ArrayList<>(batchList));
+                importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
+
+            }
+            batchList.clear();
         }
+
     }
 
+    private void validate(Student student) {
+        Optional<Person> personExisting = personRepository.findByPesel(student.getPesel());
+        if (personExisting.isPresent()) {
+            logger.error("Person with pesel: {} exists", student.getPesel());
+            throw new EntityExistsException(MessageFormat.format("Person with pesel: {} exists", student.getPesel()));
+        }
+        personValidator.validate(student);
+    }
 
     private void validateDto(StudentDto studentDto) {
         Optional<Person> personExisting = personRepository.findByPesel(studentDto.getPesel());
@@ -84,24 +108,29 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
         personValidator.validate(studentDto);
     }
 
-    private StudentDto parseCsvToDto(String csvLine) {
+    private Student parseCsvToDto(String csvLine) {
+        logger.debug("STUDENT LIST: {}", csvLine);
         String[] fields = csvLine.split(",");
+
         if (fields.length < 11 || !"student" .equalsIgnoreCase(fields[0])) {
             logger.error("Invalid CSV line for student: {}", csvLine);
             throw new IllegalArgumentException("Invalid CSV line for student");
         }
-        return StudentDto.builder()
-                .firstName(fields[1])
-                .lastName(fields[2])
-                .pesel(fields[3])
-                .height(Double.parseDouble(fields[4]))
-                .weight(Double.parseDouble(fields[5]))
-                .email(fields[6])
-                .universityName(fields[7])
-                .yearOfStudy(Integer.parseInt(fields[8]))
-                .studyField(fields[9])
-                .scholarship(Double.parseDouble(fields[10]))
-                .build();
+
+        Student student = new Student();
+        student.setFirstName(fields[1]);
+        student.setLastName(fields[2]);
+        student.setPesel(fields[3]);
+        student.setHeight(Double.parseDouble(fields[4]));
+        student.setWeight(Double.parseDouble(fields[5]));
+        student.setEmail(fields[6]);
+        student.setType("student");
+        student.setUniversityName(fields[7]);
+        student.setYearOfStudy(Integer.parseInt(fields[8]));
+        student.setStudyField(fields[9]);
+        student.setScholarship(Double.parseDouble(fields[10]));
+
+        return student;
     }
 
     private StudentDto saveStudent(StudentDto studentDto) {

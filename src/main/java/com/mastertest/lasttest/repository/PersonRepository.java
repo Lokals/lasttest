@@ -14,6 +14,6 @@ public interface PersonRepository extends JpaRepository<Person, Long>, JpaSpecif
 
     @Query("SELECT p FROM Person p WHERE p.pesel = :pesel")
     Optional<Person> findByPesel(@Param("pesel") String pesel);
-
+    
 
 }

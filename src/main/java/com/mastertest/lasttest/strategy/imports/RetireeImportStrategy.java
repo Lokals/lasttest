@@ -2,6 +2,7 @@ package com.mastertest.lasttest.strategy.imports;
 
 import com.mastertest.lasttest.configuration.ConversionUtils;
 import com.mastertest.lasttest.model.Person;
+import com.mastertest.lasttest.model.Retiree;
 import com.mastertest.lasttest.model.dto.PersonDto;
 import com.mastertest.lasttest.model.dto.RetireeDto;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
@@ -22,7 +23,11 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.text.ParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @RequiredArgsConstructor
 @Component
@@ -36,14 +41,21 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
     private final ImportStatusService importStatusService;
     private final PersonRetireeService personRetireeService;
     private static final Logger logger = LoggerFactory.getLogger(RetireeImportStrategy.class);
-    private ThreadLocal<List<RetireeDto>> threadLocalBatch = ThreadLocal.withInitial(ArrayList::new);
+    //    private List<Retiree> batchList = Collections.synchronizedList(new ArrayList<>());
+    private final CopyOnWriteArrayList<Retiree> batchList = new CopyOnWriteArrayList<>();
 
 
     @Override
+    public Long getBatchSize() {
+        return (long) batchList.size();
+
+    }
+
+    @Override
     public void validateParseAndSave(String record) throws ParseException {
-        RetireeDto retireeDto = parseCsvToDto(record);
-        validateDto(retireeDto);
-        saveRetiree(retireeDto);
+        Retiree retiree = parseCsvToDto(record);
+        validate(retiree);
+//        saveRetiree(retireeDto);
     }
 
     @Override
@@ -55,42 +67,60 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
 
     @Override
     public void addToBatch(String record) throws ParseException {
-        List<RetireeDto> batchList = threadLocalBatch.get();
-        RetireeDto retireeDto = parseCsvToDto(record);
-        validateDto(retireeDto);
-        batchList.add(retireeDto);
+
+        Retiree retiree = parseCsvToDto(record);
+        validate(retiree);
+        batchList.add(retiree);
+
 
     }
 
 
     @Override
     public void processBatch(ImportStatus importStatus) {
-        List<RetireeDto> batchList = threadLocalBatch.get();
-        if (!batchList.isEmpty()){
-            personRetireeService.savePersonsAndERetiree(batchList);
-            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
+        synchronized (batchList) {
 
+            if (!batchList.isEmpty()) {
+                logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
+                personRetireeService.savePersonsAndERetiree(new ArrayList<>(batchList));
+                importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
+
+            }
+            batchList.clear();
         }
     }
 
 
-    private RetireeDto parseCsvToDto(String csvLine) throws ParseException {
+    private Retiree parseCsvToDto(String csvLine) throws ParseException {
+        logger.debug("RETIREE LIST: {}", csvLine);
         String[] fields = csvLine.split(",");
         if (fields.length < 9 || !"retiree" .equalsIgnoreCase(fields[0])) {
             logger.error("Invalid CSV line for retiree: {}", csvLine);
             throw new IllegalArgumentException("Invalid CSV line for retiree");
         }
-        return RetireeDto.builder()
-                .firstName(fields[1])
-                .lastName(fields[2])
-                .pesel(fields[3])
-                .height(Double.parseDouble(fields[4]))
-                .weight(Double.parseDouble(fields[5]))
-                .email(fields[6])
-                .pensionAmount(Double.parseDouble(fields[7]))
-                .yearsWorked(Integer.parseInt(fields[8]))
-                .build();
+        logger.debug("RETIREE LIST: {}", fields);
+        Retiree retiree = new Retiree();
+        retiree.setFirstName(fields[1]);
+        retiree.setLastName(fields[2]);
+        retiree.setPesel(fields[3]);
+        retiree.setHeight(Double.parseDouble(fields[4]));
+        retiree.setWeight(Double.parseDouble(fields[5]));
+        retiree.setEmail(fields[6]);
+        retiree.setType("retiree");
+        retiree.setPensionAmount(Double.parseDouble(fields[7]));
+        retiree.setYearsWorked(Integer.parseInt(fields[8]));
+        return retiree;
     }
+
+    private void validate(Retiree retireeDto) {
+        Optional<Person> personExisting = personRepository.findByPesel(retireeDto.getPesel());
+        if (personExisting.isPresent()) {
+            logger.error("Person with pesel: {} exists", retireeDto.getPesel());
+            throw new EntityExistsException(MessageFormat.format("Person with pesel: {} exists", retireeDto.getPesel()));
+        }
+        validator.validate(retireeDto);
+    }
+
 
     private void validateDto(RetireeDto retireeDto) {
         Optional<Person> personExisting = personRepository.findByPesel(retireeDto.getPesel());

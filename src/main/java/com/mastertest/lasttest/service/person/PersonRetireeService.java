@@ -1,14 +1,14 @@
 package com.mastertest.lasttest.service.person;
 
 import com.mastertest.lasttest.model.Retiree;
-import com.mastertest.lasttest.model.dto.RetireeDto;
 import com.mastertest.lasttest.repository.PersonRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 
 @Service
@@ -17,28 +17,12 @@ public class PersonRetireeService {
 
     private final PersonRepository personRepository;
 
+    @Retryable(maxAttempts = 4, backoff = @Backoff(delay = 500))
     @Transactional(Transactional.TxType.REQUIRES_NEW)
-    public void savePersonsAndERetiree(List<RetireeDto> dtos) {
-        List<Retiree> retiree = dtos.stream()
-                .map(this::convertToRetireeEntity)
-                .collect(Collectors.toList());
+    public void savePersonsAndERetiree(List<Retiree> dtos) {
 
-        personRepository.saveAll(retiree);
+        personRepository.saveAll(dtos);
 
-    }
-
-    private Retiree convertToRetireeEntity(RetireeDto dto) {
-        Retiree retiree = new Retiree();
-        retiree.setPesel(dto.getPesel());
-        retiree.setType("retiree");
-        retiree.setFirstName(dto.getFirstName());
-        retiree.setLastName(dto.getLastName());
-        retiree.setHeight(dto.getHeight());
-        retiree.setWeight(dto.getWeight());
-        retiree.setEmail(dto.getEmail());
-        retiree.setPensionAmount(dto.getPensionAmount());
-        retiree.setYearsWorked(dto.getYearsWorked());
-        return retiree;
     }
 
 

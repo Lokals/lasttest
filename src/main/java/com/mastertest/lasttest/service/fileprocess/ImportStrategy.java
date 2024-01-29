@@ -13,4 +13,5 @@ public interface ImportStrategy<T extends PersonDto> {
 
     void addToBatch(String record) throws ParseException;
     void processBatch(ImportStatus importStatus);
+    Long getBatchSize();
 }
