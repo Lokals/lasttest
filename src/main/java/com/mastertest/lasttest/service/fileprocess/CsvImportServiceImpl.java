@@ -17,8 +17,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 @AllArgsConstructor
 @Service
@@ -31,10 +34,11 @@ public class CsvImportServiceImpl implements CsvImportService {
     private final StrategyManager strategyManager;
 
     private final Executor fileProcessingExecutor;
+    private final ExecutorService taskExecutor;
 
 
 
-//    @Async("fileProcessingExecutor")
+//    @Async
 //    public void importCsv(MultipartFile file, ImportStatus importStatus) {
 //
 //        try (Stream<String> lines = new BufferedReader(new InputStreamReader(file.getInputStream())).lines()) {
@@ -58,14 +62,17 @@ public class CsvImportServiceImpl implements CsvImportService {
         List<CompletableFuture<Void>> futures = new ArrayList<>();
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+            Set<String> processedRecords = ConcurrentHashMap.newKeySet();
             List<String> chunk = new ArrayList<>();
             String line;
             while ((line = reader.readLine()) != null) {
-                chunk.add(line);
-                if (chunk.size() == CHUNK_SIZE) {
-                    CompletableFuture<Void> future = processChunkAsync(new ArrayList<>(chunk), importStatus);
-                    futures.add(future);
-                    chunk.clear();
+                if (processedRecords.add(line)) {
+                    chunk.add(line);
+                    if (chunk.size() == CHUNK_SIZE) {
+                        CompletableFuture<Void> future = processChunkAsync(new ArrayList<>(chunk), importStatus);
+                        futures.add(future);
+                        chunk.clear();
+                    }
                 }
             }
             if (!chunk.isEmpty()) {
@@ -82,7 +89,6 @@ public class CsvImportServiceImpl implements CsvImportService {
     }
 
     private CompletableFuture<Void> processChunkAsync(List<String> chunk, ImportStatus importStatus) {
-
         return CompletableFuture.runAsync(() -> {
             for (String record : chunk) {
                 csvProcessingService.processRecords(record, importStatus);

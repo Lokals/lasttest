@@ -8,8 +8,6 @@ import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,21 +21,28 @@ public class CsvProcessingService {
 
     private static final Logger logger = LoggerFactory.getLogger(CsvImportServiceImpl.class);
 
-    @Retryable(maxAttempts = 4, backoff = @Backoff(delay = 500))
+
     @Transactional
     public void processRecords(String record, ImportStatus importStatus) {
+
 
         try {
             String[] fields = record.split(",");
             if (fields.length > 0) {
                 String type = fields[0];
+                logger.debug("Attempting to process record of type: {}", type);
+
                 ImportStrategy<?> strategy = strategyManager.getStrategy(type);
+                if (strategy == null) {
+                    logger.error("No strategy found for type: {}", type);
+                    return;
+                }
                 strategy.addToBatch(record);
             } else {
-                throw new IllegalArgumentException("No strategy found  type");
+                logger.error("Record does not have a type: {}", record);
             }
         } catch (Exception e) {
-            logger.error("Error processing row number {}: {}", importStatus.getProcessedRows(), e.getMessage());
+            logger.error("Error processing row: {}", record, e);
         }
         strategyManager.getAllStrategies().forEach(strategy -> {
             if (strategy.getBatchSize() >= properties.getBatchSize()) {

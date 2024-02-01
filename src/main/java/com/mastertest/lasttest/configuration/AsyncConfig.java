@@ -20,7 +20,7 @@ public class AsyncConfig {
 
         executor.setCorePoolSize(cores);
         executor.setMaxPoolSize(cores * 2);
-        executor.setQueueCapacity(10000);
+        executor.setQueueCapacity(2500);
         executor.setThreadNamePrefix("FileProcThread-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();

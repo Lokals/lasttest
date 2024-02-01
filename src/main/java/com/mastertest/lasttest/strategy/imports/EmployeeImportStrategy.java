@@ -1,6 +1,7 @@
 package com.mastertest.lasttest.strategy.imports;
 
 import com.mastertest.lasttest.configuration.ConversionUtils;
+import com.mastertest.lasttest.configuration.PersonManagementProperties;
 import com.mastertest.lasttest.model.Employee;
 import com.mastertest.lasttest.model.Person;
 import com.mastertest.lasttest.model.dto.EmployeeDto;
@@ -25,11 +26,8 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 @RequiredArgsConstructor
 @Component
@@ -43,11 +41,12 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
     private final PersonEmployeeService employeeService;
     private static final Logger logger = LoggerFactory.getLogger(EmployeeImportStrategy.class);
     private static final DateParser DATE_PARSER = FastDateFormat.getInstance("yyyy-MM-dd");
-    private final CopyOnWriteArrayList<Employee> batchList = new CopyOnWriteArrayList<>();
+    private final Queue<Employee> batchQueue = new ConcurrentLinkedQueue<>();
+    private final PersonManagementProperties properties;
 
     @Override
     public Long getBatchSize() {
-        return (long) batchList.size();
+        return (long) batchQueue.size();
     }
 
     @Override
@@ -68,24 +67,82 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
     public void addToBatch(String record) throws ParseException {
         Employee employee = parseCsvToDto(record);
         validate(employee);
-        batchList.add(employee);
-
+        batchQueue.add(employee);
     }
-
 
     @Override
     public void processBatch(ImportStatus importStatus) {
-        synchronized (batchList) {
-            if (!batchList.isEmpty()) {
-                logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
-                employeeService.savePersonsAndEmployee(new ArrayList<>(batchList));
-                importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
-
+        while (!batchQueue.isEmpty()) {
+            List<Employee> batch = new ArrayList<>();
+            for (int i = 0; i < properties.getBatchSize() && !batchQueue.isEmpty(); i++) {
+                batch.add(batchQueue.poll());
             }
-            batchList.clear();
+
+            if (!batch.isEmpty()) {
+                processBatchInternal(batch, importStatus);
+            }
         }
     }
+    private void processBatchInternal(List<Employee> batch, ImportStatus importStatus) {
+        logger.debug("Processing Employee batch with size: {} on thread: {}", batch.size(), Thread.currentThread().getName());
+        List<Map<String, Object>> personBatch = new ArrayList<>();
+        Set<String> pesels = new HashSet<>();
+        for (Employee employee : batch) {
+            if (employee != null) {
+                Map<String, Object> personParams = new HashMap<>();
+                personParams.put("pesel", employee.getPesel());
+                personParams.put("first_name", employee.getFirstName());
+                personParams.put("last_name", employee.getLastName());
+                personParams.put("height", employee.getHeight());
+                personParams.put("weight", employee.getWeight());
+                personParams.put("email", employee.getEmail());
+                personParams.put("type", "employee");
+                personParams.put("version", 0L);
+                personBatch.add(personParams);
+                pesels.add(employee.getPesel());
+            }
+        }
+        String personSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
+        namedParameterJdbcTemplate.batchUpdate(personSql, personBatch.toArray(new Map[0]));
 
+
+        Map<String, Long> peselToIdMap = retrievePersonIds(pesels);
+        logger.debug("EXTRACTED PESELS: {}", peselToIdMap);
+        List<Map<String, Object>> employeeBatch = new ArrayList<>();
+        for (Employee employee : batch) {
+            Long personId = peselToIdMap.get(employee.getPesel());
+            if (personId != null) {
+                Map<String, Object> employeeParams = new HashMap<>();
+                employeeParams.put("id", personId);
+                employeeParams.put("employment_date", employee.getEmploymentDate());
+                employeeParams.put("position", employee.getPosition());
+                employeeParams.put("salary", employee.getSalary());
+                employeeBatch.add(employeeParams);
+
+            }
+        }
+
+        String sql = "INSERT INTO employee (id, employment_date, position, salary) VALUES (:id, :employment_date, :position, :salary)";
+        namedParameterJdbcTemplate.batchUpdate(sql, employeeBatch.toArray(new Map[0]));
+
+        importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batch.size());
+    }
+
+    private Map<String, Long> retrievePersonIds(Set<String> pesels) {
+        if (pesels.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        String idRetrievalSql = "SELECT id, pesel FROM person WHERE pesel IN (:pesels)";
+        Map<String, Object> params = Collections.singletonMap("pesels", pesels);
+
+        return namedParameterJdbcTemplate.query(idRetrievalSql, params, rs -> {
+            Map<String, Long> map = new HashMap<>();
+            while (rs.next()) {
+                map.put(rs.getString("pesel"), rs.getLong("id"));
+            }
+            return map;
+        });
+    }
 
     private void validate(Employee employee) {
         Optional<Person> personExisting = personRepository.findByPesel(employee.getPesel());

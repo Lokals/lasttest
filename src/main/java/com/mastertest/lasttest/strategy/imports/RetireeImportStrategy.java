@@ -1,6 +1,7 @@
 package com.mastertest.lasttest.strategy.imports;
 
 import com.mastertest.lasttest.configuration.ConversionUtils;
+import com.mastertest.lasttest.configuration.PersonManagementProperties;
 import com.mastertest.lasttest.model.Person;
 import com.mastertest.lasttest.model.Retiree;
 import com.mastertest.lasttest.model.dto.PersonDto;
@@ -23,11 +24,8 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 @RequiredArgsConstructor
 @Component
@@ -42,12 +40,14 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
     private final PersonRetireeService personRetireeService;
     private static final Logger logger = LoggerFactory.getLogger(RetireeImportStrategy.class);
     //    private List<Retiree> batchList = Collections.synchronizedList(new ArrayList<>());
-    private final CopyOnWriteArrayList<Retiree> batchList = new CopyOnWriteArrayList<>();
+//    private final CopyOnWriteArrayList<Retiree> batchList = new CopyOnWriteArrayList<>();
+    private final Queue<Retiree> batchQueue = new ConcurrentLinkedQueue<>();
+    private final PersonManagementProperties properties;
 
 
     @Override
     public Long getBatchSize() {
-        return (long) batchList.size();
+        return (long) batchQueue.size();
 
     }
 
@@ -65,30 +65,90 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
         return saveRetiree(retireeDto);
     }
 
+
     @Override
     public void addToBatch(String record) throws ParseException {
-
         Retiree retiree = parseCsvToDto(record);
         validate(retiree);
-        batchList.add(retiree);
-
+        batchQueue.add(retiree);
 
     }
-
 
     @Override
     public void processBatch(ImportStatus importStatus) {
-        synchronized (batchList) {
-
-            if (!batchList.isEmpty()) {
-                logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
-                personRetireeService.savePersonsAndERetiree(new ArrayList<>(batchList));
-                importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
-
+        while (!batchQueue.isEmpty()) {
+            List<Retiree> batch = new ArrayList<>();
+            for (int i = 0; i < properties.getBatchSize() && !batchQueue.isEmpty(); i++) {
+                batch.add(batchQueue.poll());
             }
-            batchList.clear();
+
+            if (!batch.isEmpty()) {
+                processBatchInternal(batch, importStatus);
+            }
         }
     }
+
+    private void processBatchInternal(List<Retiree> batch, ImportStatus importStatus) {
+        logger.debug("Processing Retiree batch with size: {} on thread: {}", batch.size(), Thread.currentThread().getName());
+
+        List<Map<String, Object>> personBatch = new ArrayList<>();
+        Set<String> pesels = new HashSet<>();
+        for (Retiree retiree : batch) {
+            if (retiree != null) {
+                Map<String, Object> personParams = new HashMap<>();
+                personParams.put("pesel", retiree.getPesel());
+                personParams.put("first_name", retiree.getFirstName());
+                personParams.put("last_name", retiree.getLastName());
+                personParams.put("height", retiree.getHeight());
+                personParams.put("weight", retiree.getWeight());
+                personParams.put("email", retiree.getEmail());
+                personParams.put("type", "retiree");
+                personParams.put("version", 0L);
+                personBatch.add(personParams);
+                pesels.add(retiree.getPesel());
+            }
+        }
+
+        String personSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
+        namedParameterJdbcTemplate.batchUpdate(personSql, personBatch.toArray(new Map[0]));
+
+
+        Map<String, Long> peselToIdMap = retrievePersonIds(pesels);
+        logger.debug("EXTRACTED PESELS: {}", peselToIdMap);
+
+        List<Map<String, Object>> retireeBatch = new ArrayList<>();
+        for (Retiree retiree : batch) {
+            Long personId = peselToIdMap.get(retiree.getPesel());
+            Map<String, Object> params = new HashMap<>();
+            params.put("id", personId);
+            params.put("pension_amount", retiree.getPensionAmount());
+            params.put("years_worked", retiree.getYearsWorked());
+            retireeBatch.add(params);
+        }
+        String sql = "INSERT INTO retiree (id, pension_amount, years_worked) VALUES (:id, :pension_amount, :years_worked)";
+        namedParameterJdbcTemplate.batchUpdate(sql, retireeBatch.toArray(new Map[0]));
+        importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batch.size());
+
+
+        importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batch.size());
+    }
+
+    private Map<String, Long> retrievePersonIds(Set<String> pesels) {
+        if (pesels.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        String idRetrievalSql = "SELECT id, pesel FROM person WHERE pesel IN (:pesels)";
+        Map<String, Object> params = Collections.singletonMap("pesels", pesels);
+
+        return namedParameterJdbcTemplate.query(idRetrievalSql, params, rs -> {
+            Map<String, Long> map = new HashMap<>();
+            while (rs.next()) {
+                map.put(rs.getString("pesel"), rs.getLong("id"));
+            }
+            return map;
+        });
+    }
+
 
 
     private Retiree parseCsvToDto(String csvLine) throws ParseException {

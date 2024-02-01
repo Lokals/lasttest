@@ -1,6 +1,7 @@
 package com.mastertest.lasttest.strategy.imports;
 
 import com.mastertest.lasttest.configuration.ConversionUtils;
+import com.mastertest.lasttest.configuration.PersonManagementProperties;
 import com.mastertest.lasttest.model.Person;
 import com.mastertest.lasttest.model.Student;
 import com.mastertest.lasttest.model.dto.PersonDto;
@@ -26,12 +27,11 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 @RequiredArgsConstructor
 @Component
 public class StudentImportStrategy implements ImportStrategy<StudentDto> {
-
 
     private final PersonValidator personValidator;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
@@ -39,16 +39,15 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
     private final PersonRepository personRepository;
     private final ImportStatusService importStatusService;
     private final PersonStudentService personStudentService;
+    private final PersonManagementProperties properties;
 
     private static final Logger logger = LoggerFactory.getLogger(StudentImportStrategy.class);
-    //    private List<Student> batchList = Collections.synchronizedList(new ArrayList<>());
-    private final CopyOnWriteArrayList<Student> batchList = new CopyOnWriteArrayList<>();
+    //    private final CopyOnWriteArrayList<Student> batchList = new CopyOnWriteArrayList<>();
+    private final Queue<Student> batchQueue = new ConcurrentLinkedQueue<>();
 
     @Override
     public Long getBatchSize() {
-        return (long) batchList.size();
-
-
+        return (long) batchQueue.size();
     }
 
     @Override
@@ -70,24 +69,84 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
 
         Student student = parseCsvToDto(record);
         validate(student);
-        batchList.add(student);
+        batchQueue.add(student);
 
 
     }
-
     @Override
     public void processBatch(ImportStatus importStatus) {
-        synchronized (batchList) {
+        final int BATCH_SIZE = properties.getBatchSize();
 
-            if (!batchList.isEmpty()) {
-                logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
-                personStudentService.savePersonsAndStudents(new ArrayList<>(batchList));
-                importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
-
+        while (!batchQueue.isEmpty()) {
+            List<Student> batch = new ArrayList<>();
+            for (int i = 0; i < BATCH_SIZE && !batchQueue.isEmpty(); i++) {
+                batch.add(batchQueue.poll());
             }
-            batchList.clear();
-        }
 
+            if (!batch.isEmpty()) {
+                processBatchInternal(batch, importStatus);
+            }
+        }
+    }
+    private void processBatchInternal(List<Student> batch, ImportStatus importStatus) {
+        logger.debug("Processing Student batch with size: {} on thread: {}", batch.size(), Thread.currentThread().getName());
+
+        List<Map<String, Object>> personBatch = new ArrayList<>();
+        Set<String> pesels = new HashSet<>();
+        for (Student student : batch) {
+            if (student != null) {
+                Map<String, Object> personParams = new HashMap<>();
+                personParams.put("pesel", student.getPesel());
+                personParams.put("first_name", student.getFirstName());
+                personParams.put("last_name", student.getLastName());
+                personParams.put("height", student.getHeight());
+                personParams.put("weight", student.getWeight());
+                personParams.put("email", student.getEmail());
+                personParams.put("type", "student");
+                personParams.put("version", 0L);
+                personBatch.add(personParams);
+                pesels.add(student.getPesel());
+            }
+        }
+        String personSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
+        namedParameterJdbcTemplate.batchUpdate(personSql, personBatch.toArray(new Map[0]));
+
+
+        Map<String, Long> peselToIdMap = retrievePersonIds(pesels);
+        logger.debug("EXTRACTED PESELS: {}", peselToIdMap);
+        List<Map<String, Object>> studentBatch = new ArrayList<>();
+        for (Student student : batch) {
+            Long personId = peselToIdMap.get(student.getPesel());
+            Map<String, Object> studentParams = new HashMap<>();
+            studentParams.put("id", personId);
+            studentParams.put("university_name", student.getUniversityName());
+            studentParams.put("year_of_study", student.getYearOfStudy());
+            studentParams.put("study_field", student.getStudyField());
+            studentParams.put("scholarship", student.getScholarship());
+            studentBatch.add(studentParams);
+        }
+        String studentSql = "INSERT INTO student (id, university_name, year_of_study, study_field, scholarship) VALUES (:id, :university_name, :year_of_study, :study_field, :scholarship)";
+        namedParameterJdbcTemplate.batchUpdate(studentSql, studentBatch.toArray(new Map[0]));
+
+
+        importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batch.size());
+    }
+
+
+    private Map<String, Long> retrievePersonIds(Set<String> pesels) {
+        if (pesels.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        String idRetrievalSql = "SELECT id, pesel FROM person WHERE pesel IN (:pesels)";
+        Map<String, Object> params = Collections.singletonMap("pesels", pesels);
+
+        return namedParameterJdbcTemplate.query(idRetrievalSql, params, rs -> {
+            Map<String, Long> map = new HashMap<>();
+            while (rs.next()) {
+                map.put(rs.getString("pesel"), rs.getLong("id"));
+            }
+            return map;
+        });
     }
 
     private void validate(Student student) {
