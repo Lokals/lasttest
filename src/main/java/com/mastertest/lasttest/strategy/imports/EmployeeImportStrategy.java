@@ -75,15 +75,13 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
 
     @Override
     public void processBatch(ImportStatus importStatus) {
-        synchronized (batchList) {
-            if (!batchList.isEmpty()) {
-                logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
-                employeeService.savePersonsAndEmployee(new ArrayList<>(batchList));
-                importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
+        if (!batchList.isEmpty()) {
+            logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
+            employeeService.savePersonsAndEmployee(new ArrayList<>(batchList));
+            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
 
-            }
-            batchList.clear();
         }
+        batchList.clear();
     }
 
 
@@ -108,7 +106,7 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
     private Employee parseCsvToDto(String csvLine) throws ParseException {
         logger.debug("EMPLOYEE LIST: {}", csvLine);
         String[] fields = csvLine.split(",");
-        if (fields.length < 10 || !"employee" .equalsIgnoreCase(fields[0])) {
+        if (fields.length < 10 || !"employee".equalsIgnoreCase(fields[0])) {
             logger.error("Invalid CSV line for employee: {}", csvLine);
             throw new IllegalArgumentException("Invalid CSV line for employee");
         }

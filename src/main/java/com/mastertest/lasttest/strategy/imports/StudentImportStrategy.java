@@ -17,7 +17,6 @@ import jakarta.persistence.EntityExistsException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -35,20 +34,16 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
 
     private final PersonValidator personValidator;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
-    private final JdbcTemplate jdbcTemplate;
     private final PersonRepository personRepository;
     private final ImportStatusService importStatusService;
     private final PersonStudentService personStudentService;
 
     private static final Logger logger = LoggerFactory.getLogger(StudentImportStrategy.class);
-    //    private List<Student> batchList = Collections.synchronizedList(new ArrayList<>());
     private final CopyOnWriteArrayList<Student> batchList = new CopyOnWriteArrayList<>();
 
     @Override
     public Long getBatchSize() {
         return (long) batchList.size();
-
-
     }
 
     @Override
@@ -67,28 +62,23 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
 
     @Override
     public void addToBatch(String record) {
-
         Student student = parseCsvToDto(record);
         validate(student);
         batchList.add(student);
-
-
     }
 
     @Override
     public void processBatch(ImportStatus importStatus) {
-        synchronized (batchList) {
 
-            if (!batchList.isEmpty()) {
-                logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
-                personStudentService.savePersonsAndStudents(new ArrayList<>(batchList));
-                importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
+        if (!batchList.isEmpty()) {
+            logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
+            personStudentService.savePersonsAndStudents(new ArrayList<>(batchList));
+            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
 
-            }
-            batchList.clear();
         }
-
+        batchList.clear();
     }
+
 
     private void validate(Student student) {
         Optional<Person> personExisting = personRepository.findByPesel(student.getPesel());
@@ -112,7 +102,7 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
         logger.debug("STUDENT LIST: {}", csvLine);
         String[] fields = csvLine.split(",");
 
-        if (fields.length < 11 || !"student" .equalsIgnoreCase(fields[0])) {
+        if (fields.length < 11 || !"student".equalsIgnoreCase(fields[0])) {
             logger.error("Invalid CSV line for student: {}", csvLine);
             throw new IllegalArgumentException("Invalid CSV line for student");
         }

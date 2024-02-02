@@ -8,7 +8,7 @@ spring:
     show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
   liquibase:
     change-log: classpath:db/db.changelog-master.xml
     enabled: true

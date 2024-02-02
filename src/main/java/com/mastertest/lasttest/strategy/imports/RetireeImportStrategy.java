@@ -78,23 +78,20 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
 
     @Override
     public void processBatch(ImportStatus importStatus) {
-        synchronized (batchList) {
+        if (!batchList.isEmpty()) {
+            logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
+            personRetireeService.savePersonsAndERetiree(new ArrayList<>(batchList));
+            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
 
-            if (!batchList.isEmpty()) {
-                logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
-                personRetireeService.savePersonsAndERetiree(new ArrayList<>(batchList));
-                importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
-
-            }
-            batchList.clear();
         }
+        batchList.clear();
     }
 
 
     private Retiree parseCsvToDto(String csvLine) throws ParseException {
         logger.debug("RETIREE LIST: {}", csvLine);
         String[] fields = csvLine.split(",");
-        if (fields.length < 9 || !"retiree" .equalsIgnoreCase(fields[0])) {
+        if (fields.length < 9 || !"retiree".equalsIgnoreCase(fields[0])) {
             logger.error("Invalid CSV line for retiree: {}", csvLine);
             throw new IllegalArgumentException("Invalid CSV line for retiree");
         }

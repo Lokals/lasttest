@@ -29,28 +29,8 @@ public class CsvImportServiceImpl implements CsvImportService {
     private final CsvProcessingService csvProcessingService;
     private final PersonManagementProperties properties;
     private final StrategyManager strategyManager;
-
     private final Executor fileProcessingExecutor;
-
-
-
-//    @Async("fileProcessingExecutor")
-//    public void importCsv(MultipartFile file, ImportStatus importStatus) {
-//
-//        try (Stream<String> lines = new BufferedReader(new InputStreamReader(file.getInputStream())).lines()) {
-//            lines.forEach(record -> csvProcessingService.processRecords(record, importStatus));
-//        } catch (IOException e) {
-//            logger.error("Importing CSV failed with error message: ", e);
-//            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.FAILED, importStatusService.getRowsImportStatus(importStatus.getId()));
-//        }
-//
-//        strategyManager.getAllStrategies().forEach(strategy -> {
-//            if (strategy.getBatchSize() != 0) {
-//                strategy.processBatch(importStatus);
-//            }
-//        });
-//        importStatusService.updateImportStatus(importStatus.getId(), StatusFile.COMPLETED, importStatusService.getRowsImportStatus(importStatus.getId()));
-//    }
+    private final BatchProcessService batchProcessService;
 
     @Async("fileProcessingExecutor")
     public void importCsv(MultipartFile file, ImportStatus importStatus) {
@@ -69,25 +49,29 @@ public class CsvImportServiceImpl implements CsvImportService {
                 }
             }
             if (!chunk.isEmpty()) {
-                CompletableFuture<Void> future = processChunkAsync(chunk, importStatus);
+                CompletableFuture<Void> future = processChunkAsync(new ArrayList<>(chunk), importStatus);
                 futures.add(future);
             }
-
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         } catch (IOException e) {
             logger.error("Error reading the file: ", e);
         }
 
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        batchProcessService.processBatchAsync(importStatus);
+
+
         importStatusService.updateImportStatus(importStatus.getId(), StatusFile.COMPLETED, importStatusService.getRowsImportStatus(importStatus.getId()));
     }
 
-    private CompletableFuture<Void> processChunkAsync(List<String> chunk, ImportStatus importStatus) {
 
+    private CompletableFuture<Void> processChunkAsync(List<String> chunk, ImportStatus importStatus) {
         return CompletableFuture.runAsync(() -> {
             for (String record : chunk) {
                 csvProcessingService.processRecords(record, importStatus);
             }
         }, fileProcessingExecutor);
     }
+
 
 }
