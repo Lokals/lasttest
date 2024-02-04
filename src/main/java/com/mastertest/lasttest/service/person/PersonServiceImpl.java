@@ -25,9 +25,9 @@ public class PersonServiceImpl implements PersonService {
 
 
     @Override
-    public Person getPersonById(Long personId) {
+    public Person getPersonById(String personId) {
         logger.info("Retrieving person by id: {}", personId);
-        return personRepository.findById(personId)
+        return personRepository.findByPesel(personId)
                 .orElseThrow(() -> {
                     logger.error("Person with id={} not found", personId);
                     return new EntityNotFoundException(
@@ -37,7 +37,7 @@ public class PersonServiceImpl implements PersonService {
 
     @Transactional
     @Override
-    public PersonDto updatePerson(Long id, Map<String, Object> commandMap) throws ParseException, JsonProcessingException {
+    public PersonDto updatePerson(String id, Map<String, Object> commandMap) throws ParseException, JsonProcessingException {
         Person person = getPersonById(id);
         UpdateStrategy updateStrategy = updateStrategyManager.getUpdateStrategy(person.getType());
         return updateStrategy.updateAndValidate(commandMap, person);

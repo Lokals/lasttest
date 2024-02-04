@@ -25,10 +25,10 @@ public class EmployeePositionServiceImpl implements EmployeePositionService {
     private final EmployeeRepository employeeRepository;
 
     @Override
-    public EmployeePositionDto updatePositionToEmployee(Long employeeId, UpdateEmployeePositionCommand command) {
-        logger.debug("Updating position for employee with id: {}", employeeId);
+    public EmployeePositionDto updatePositionToEmployee(String employeePesel, UpdateEmployeePositionCommand command) {
+        logger.debug("Updating position for employee with pesel: {}", employeePesel);
 
-        Employee employee = getEmployeeById(employeeId);
+        Employee employee = getEmployeeByPesel(employeePesel);
 
         EmployeePosition employeePosition = new EmployeePosition();
         employeePosition.setEmployee(employee);
@@ -46,7 +46,7 @@ public class EmployeePositionServiceImpl implements EmployeePositionService {
         employee.setSalary(command.getSalary());
         employeeRepository.save(employee);
         employeePositionRepository.save(employeePosition);
-        logger.info("Position updated for employee with id: {}", employeeId);
+        logger.info("Position updated for employee with pesel: {}", employeePesel);
         return EmployeePositionDto.fromEntity(employeePosition);
     }
 
@@ -62,7 +62,7 @@ public class EmployeePositionServiceImpl implements EmployeePositionService {
     private boolean isPositionOccupied(EmployeePosition newEmployeePosition) {
         List<EmployeePosition> positions = employeePositionRepository.findByPositionName(newEmployeePosition.getPositionName());
         return positions.stream()
-                .anyMatch(position -> !position.getEmployee().getId().equals(newEmployeePosition.getEmployee().getId())
+                .anyMatch(position -> !position.getEmployee().getPesel().equals(newEmployeePosition.getEmployee().getPesel())
                         && isDateRangeOverlap(newEmployeePosition.getStartDate(), newEmployeePosition.getEndDate(),
                         position.getStartDate(), position.getEndDate()));
     }
@@ -71,10 +71,10 @@ public class EmployeePositionServiceImpl implements EmployeePositionService {
         return !start1.isAfter(end2) && !start2.isAfter(end1);
     }
 
-    private Employee getEmployeeById(Long employeeId) {
-        logger.debug("Retrieving employee with id: {}", employeeId);
-        return employeeRepository.findById(employeeId)
+    private Employee getEmployeeByPesel(String employeePesel) {
+        logger.debug("Retrieving employee with pesel: {}", employeePesel);
+        return employeeRepository.findById(employeePesel)
                 .orElseThrow(() -> new EntityNotFoundException(
-                        MessageFormat.format("Employee with id={0} not found", employeeId)));
+                        MessageFormat.format("Employee with pesel={0} not found", employeePesel)));
     }
 }

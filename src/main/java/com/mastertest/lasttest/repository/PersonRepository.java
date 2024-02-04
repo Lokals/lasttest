@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface PersonRepository extends JpaRepository<Person, Long>, JpaSpecificationExecutor<Person> {
+public interface PersonRepository extends JpaRepository<Person, String>, JpaSpecificationExecutor<Person> {
 
     @Query("SELECT p FROM Person p WHERE p.pesel = :pesel")
     Optional<Person> findByPesel(@Param("pesel") String pesel);

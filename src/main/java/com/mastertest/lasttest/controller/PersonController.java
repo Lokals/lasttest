@@ -63,10 +63,10 @@ public class PersonController {
         }
     }
 
-    @PostMapping("/{id}/update")
-    public ResponseEntity<?> updatePerson(@PathVariable Long id, @Valid @RequestBody Map<String, Object> commandMap) {
+    @PostMapping("/{employeePesel}/update")
+    public ResponseEntity<?> updatePerson(@PathVariable String employeePesel, @Valid @RequestBody Map<String, Object> commandMap) {
         try {
-            PersonDto personDto = personService.updatePerson(id, commandMap);
+            PersonDto personDto = personService.updatePerson(employeePesel, commandMap);
             return ResponseEntity.ok(personDto);
         } catch (OptimisticLockException e) {
             logger.error("Entity edited during processing: {}", e.getMessage());

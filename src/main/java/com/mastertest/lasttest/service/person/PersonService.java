@@ -9,8 +9,8 @@ import java.util.Map;
 
 public interface PersonService {
 
-    Person getPersonById(Long id);
-    PersonDto updatePerson(Long id, Map<String, Object> commandMap) throws ParseException, JsonProcessingException;
+    Person getPersonById(String pesel);
+    PersonDto updatePerson(String pesel, Map<String, Object> commandMap) throws ParseException, JsonProcessingException;
 
 
 

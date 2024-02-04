@@ -1,6 +1,7 @@
 package com.mastertest.lasttest.strategy.imports;
 
 import com.mastertest.lasttest.configuration.ConversionUtils;
+import com.mastertest.lasttest.configuration.PersonManagementProperties;
 import com.mastertest.lasttest.model.Person;
 import com.mastertest.lasttest.model.Retiree;
 import com.mastertest.lasttest.model.dto.PersonDto;
@@ -14,16 +15,18 @@ import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
 import com.mastertest.lasttest.service.person.PersonRetireeService;
 import com.mastertest.lasttest.validator.PersonValidator;
 import jakarta.persistence.EntityExistsException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -41,14 +44,25 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
     private final ImportStatusService importStatusService;
     private final PersonRetireeService personRetireeService;
     private static final Logger logger = LoggerFactory.getLogger(RetireeImportStrategy.class);
-    //    private List<Retiree> batchList = Collections.synchronizedList(new ArrayList<>());
-    private final CopyOnWriteArrayList<Retiree> batchList = new CopyOnWriteArrayList<>();
+    private final PersonManagementProperties properties;
+    private final CopyOnWriteArrayList<Map<String, Object>> personBatch = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Retiree> personRepoBatch = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Map<String, Object>> retireeBatch = new CopyOnWriteArrayList<>();
 
+    String RETIREE_SQL = "INSERT INTO retiree (pesel, pension_amount, years_worked) VALUES (:pesel, :pension_amount, :years_worked)";
+    String PERSON_SQL = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
 
     @Override
     public Long getBatchSize() {
-        return (long) batchList.size();
+        return (long) personBatch.size();
 
+    }
+
+    @Override
+    public void clearBatch() {
+        personBatch.clear();
+        personRepoBatch.clear();
+        retireeBatch.clear();
     }
 
     @Override
@@ -66,26 +80,58 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
     }
 
     @Override
-    public void addToBatch(String record) throws ParseException {
-
+    public void addToBatch(String record, ImportStatus importStatus) throws ParseException {
         Retiree retiree = parseCsvToDto(record);
         validate(retiree);
-        batchList.add(retiree);
-
-
-    }
-
-
-    @Override
-    public void processBatch(ImportStatus importStatus) {
-        if (!batchList.isEmpty()) {
-            logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
-            personRetireeService.savePersonsAndERetiree(new ArrayList<>(batchList));
-            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
+        personRepoBatch.add(retiree);
+//        processPersonToBatch(retiree);
+        if (getBatchSize() >= properties.getBatchSize()){
+            processBatch();
+            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + getBatchSize());
 
         }
-        batchList.clear();
     }
+
+    @Retryable(maxAttempts = 4, backoff = @Backoff(delay = 500))
+    @Transactional
+    @Override
+    public void processBatch() {
+//        processBatchInternal();
+        trigger();
+        clearBatch();
+    }
+
+    private void trigger(){
+        personRetireeService.savePersonsAndERetiree(personRepoBatch);
+    }
+
+    private void processBatchInternal() {
+        logger.debug("Processing Employee batch with size: {} on thread: {}", personBatch.size(), Thread.currentThread().getName());
+        namedParameterJdbcTemplate.batchUpdate(PERSON_SQL, personBatch.toArray(new Map[0]));
+        namedParameterJdbcTemplate.batchUpdate(RETIREE_SQL, retireeBatch.toArray(new Map[0]));
+
+//        importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + personBatch.size());
+    }
+
+    private void processPersonToBatch(Retiree retiree) {
+        if (retiree != null) {
+            Map<String, Object> personParams = new HashMap<>();
+            Map<String, Object> retireeParams = new HashMap<>();
+            personParams.put("pesel", retiree.getPesel());
+            personParams.put("first_name", retiree.getFirstName());
+            personParams.put("last_name", retiree.getLastName());
+            personParams.put("height", retiree.getHeight());
+            personParams.put("weight", retiree.getWeight());
+            personParams.put("email", retiree.getEmail());
+            personParams.put("type", "retiree");
+            personParams.put("version", 0L);
+            retireeParams.put("pesel", retiree.getPesel());
+            retireeParams.put("pension_amount", retiree.getPensionAmount());
+            retireeParams.put("years_worked", retiree.getYearsWorked());
+            retireeBatch.add(retireeParams);
+            personBatch.add(personParams);
+        }
+     }
 
 
     private Retiree parseCsvToDto(String csvLine) throws ParseException {

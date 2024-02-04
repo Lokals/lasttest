@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface EmployeePositionRepository extends JpaRepository<EmployeePosition, Long> {
+public interface EmployeePositionRepository extends JpaRepository<EmployeePosition, String> {
 
     @Query("SELECT ep FROM EmployeePosition ep WHERE ep.positionName = :positionName")
     List<EmployeePosition> findByPositionName(String positionName);

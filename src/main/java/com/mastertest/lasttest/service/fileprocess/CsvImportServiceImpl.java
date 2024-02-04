@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.stream.Collectors;
 
 @AllArgsConstructor
 @Service
@@ -35,7 +36,6 @@ public class CsvImportServiceImpl implements CsvImportService {
     @Async("fileProcessingExecutor")
     public void importCsv(MultipartFile file, ImportStatus importStatus) {
         final int CHUNK_SIZE = properties.getBatchSize();
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
             List<String> chunk = new ArrayList<>();
@@ -43,34 +43,25 @@ public class CsvImportServiceImpl implements CsvImportService {
             while ((line = reader.readLine()) != null) {
                 chunk.add(line);
                 if (chunk.size() == CHUNK_SIZE) {
-                    CompletableFuture<Void> future = processChunkAsync(new ArrayList<>(chunk), importStatus);
-                    futures.add(future);
+                    processChunkInstantly(chunk, importStatus);
                     chunk.clear();
                 }
             }
             if (!chunk.isEmpty()) {
-                CompletableFuture<Void> future = processChunkAsync(new ArrayList<>(chunk), importStatus);
-                futures.add(future);
+                processChunkInstantly(chunk, importStatus);
             }
         } catch (IOException e) {
             logger.error("Error reading the file: ", e);
         }
-
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-
-        batchProcessService.processBatchAsync(importStatus);
-
-
         importStatusService.updateImportStatus(importStatus.getId(), StatusFile.COMPLETED, importStatusService.getRowsImportStatus(importStatus.getId()));
     }
 
+    private void processChunkInstantly(List<String> chunk, ImportStatus importStatus) {
+        List<CompletableFuture<Void>> futures = chunk.stream()
+                .map(record -> CompletableFuture.runAsync(() -> csvProcessingService.processRecords(record, importStatus), fileProcessingExecutor))
+                .collect(Collectors.toList());
 
-    private CompletableFuture<Void> processChunkAsync(List<String> chunk, ImportStatus importStatus) {
-        return CompletableFuture.runAsync(() -> {
-            for (String record : chunk) {
-                csvProcessingService.processRecords(record, importStatus);
-            }
-        }, fileProcessingExecutor);
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
 

@@ -26,7 +26,8 @@ public class CsvProcessingService {
                 String type = fields[0].toLowerCase();
                 ImportStrategy<?> strategy = strategyManager.getStrategy(type);
                 if (strategy != null) {
-                    strategy.addToBatch(record);
+                    strategy.addToBatch(record, importStatus);
+
                 } else {
                     throw new IllegalArgumentException("No strategy found for type: " + type);
                 }
