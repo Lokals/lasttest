@@ -23,4 +23,4 @@ server:
 
 person-management:
   default-page-size: 10
-  batch-size: 20000
+  batch-size: 1000
