@@ -49,9 +49,6 @@ public class RetireeUpdateStrategy implements UpdateStrategy<UpdateRetireeComman
         if (updateCommand.getLastName() != null){
             retiree.setLastName(updateCommand.getLastName());
         }
-        if (updateCommand.getPesel() != null){
-            retiree.setPesel(updateCommand.getPesel());
-        }
         if (updateCommand.getHeight() != null){
             retiree.setHeight(updateCommand.getHeight());
         }

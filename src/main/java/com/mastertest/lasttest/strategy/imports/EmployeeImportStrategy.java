@@ -7,7 +7,6 @@ import com.mastertest.lasttest.model.dto.EmployeeDto;
 import com.mastertest.lasttest.model.dto.PersonDto;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
 import com.mastertest.lasttest.model.factory.ImportStatus;
-import com.mastertest.lasttest.model.factory.StatusFile;
 import com.mastertest.lasttest.repository.PersonRepository;
 import com.mastertest.lasttest.service.fileprocess.ImportStatusService;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
@@ -25,11 +24,11 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 @RequiredArgsConstructor
 @Component
@@ -43,18 +42,31 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
     private final PersonEmployeeService employeeService;
     private static final Logger logger = LoggerFactory.getLogger(EmployeeImportStrategy.class);
     private static final DateParser DATE_PARSER = FastDateFormat.getInstance("yyyy-MM-dd");
-    private final CopyOnWriteArrayList<Employee> batchList = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Map<String, Object>> personBatch = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Map<String, Object>> employeeBatch = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArraySet<Employee> personRepoBatch = new CopyOnWriteArraySet<>();
+
+    private final String PERSON_SQL = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
+    private final String EMPLOYEE_SQL = "INSERT INTO employee (pesel, employment_date, position, salary) VALUES (:pesel, :employment_date, :position, :salary)";
+
 
     @Override
     public Long getBatchSize() {
-        return (long) batchList.size();
+        return (long) personRepoBatch.size();
+    }
+
+    @Override
+    public void clearBatch() {
+        personBatch.clear();
+        personRepoBatch.clear();
+        employeeBatch.clear();
+
     }
 
     @Override
     public void validateParseAndSave(String record) throws ParseException {
         Employee employeeDto = parseCsvToDto(record);
         validate(employeeDto);
-//        saveEmployee(employeeDto);
     }
 
     @Override
@@ -65,23 +77,47 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
     }
 
     @Override
-    public void addToBatch(String record) throws ParseException {
+    public void addToBatch(String record, ImportStatus importStatus) throws ParseException {
         Employee employee = parseCsvToDto(record);
         validate(employee);
-        batchList.add(employee);
+        personRepoBatch.add(employee);
 
     }
 
-
     @Override
-    public void processBatch(ImportStatus importStatus) {
-        if (!batchList.isEmpty()) {
-            logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
-            employeeService.savePersonsAndEmployee(new ArrayList<>(batchList));
-            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
+    public void processBatch() {
+        logger.debug("Processing Employee batch with size: {} on thread: {}", personRepoBatch.size(), Thread.currentThread().getName());
+        employeeService.savePersonsAndEmployee(personRepoBatch);
+        clearBatch();
+    }
 
+    private void processPersonToBatch(Employee employee) {
+        if (employee != null) {
+            Map<String, Object> personParams = new HashMap<>();
+            Map<String, Object> employeeParams = new HashMap<>();
+            personParams.put("pesel", employee.getPesel());
+            personParams.put("first_name", employee.getFirstName());
+            personParams.put("last_name", employee.getLastName());
+            personParams.put("height", employee.getHeight());
+            personParams.put("weight", employee.getWeight());
+            personParams.put("email", employee.getEmail());
+            personParams.put("type", "employee");
+            personParams.put("version", 0L);
+            employeeParams.put("pesel", employee.getPesel());
+            employeeParams.put("employment_date", employee.getEmploymentDate());
+            employeeParams.put("position", employee.getPosition());
+            employeeParams.put("salary", employee.getSalary());
+            employeeBatch.add(employeeParams);
+            personBatch.add(personParams);
         }
-        batchList.clear();
+    }
+
+    private void processBatchInternal() {
+        logger.debug("Processing Employee batch with size: {} on thread: {}", personBatch.size(), Thread.currentThread().getName());
+        namedParameterJdbcTemplate.batchUpdate(PERSON_SQL, personBatch.toArray(new Map[0]));
+
+        namedParameterJdbcTemplate.batchUpdate(EMPLOYEE_SQL, employeeBatch.toArray(new Map[0]));
+
     }
 
 
@@ -142,10 +178,7 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
         String insertPersonSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
         namedParameterJdbcTemplate.update(insertPersonSql, parameters);
 
-        Long personId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-
-        String insertEmployeeSql = "INSERT INTO employee (id, employment_date, position, salary) VALUES (:id, :employment_date, :position, :salary)";
-        parameters.put("id", personId);
+        String insertEmployeeSql = "INSERT INTO employee (pesel, employment_date, position, salary) VALUES (:pesel, :employment_date, :position, :salary)";
         namedParameterJdbcTemplate.update(insertEmployeeSql, parameters);
         return employeeDto;
     }

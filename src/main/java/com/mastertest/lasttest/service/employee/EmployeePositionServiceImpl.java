@@ -25,10 +25,10 @@ public class EmployeePositionServiceImpl implements EmployeePositionService {
     private final EmployeeRepository employeeRepository;
 
     @Override
-    public EmployeePositionDto updatePositionToEmployee(Long employeeId, UpdateEmployeePositionCommand command) {
-        logger.debug("Updating position for employee with id: {}", employeeId);
+    public EmployeePositionDto updatePositionToEmployee(String employeePesel, UpdateEmployeePositionCommand command) {
+        logger.debug("Updating position for employee with pesel: {}", employeePesel);
 
-        Employee employee = getEmployeeById(employeeId);
+        Employee employee = getEmployeeByPesel(employeePesel);
 
         EmployeePosition employeePosition = new EmployeePosition();
         employeePosition.setEmployee(employee);
@@ -41,20 +41,35 @@ public class EmployeePositionServiceImpl implements EmployeePositionService {
         if (isPositionOccupied(employeePosition)) {
             throw new IllegalArgumentException("The position " + command.getPositionName() + " is already occupied during the specified period.");
         }
+        if (isPositionDatesOverlapWithExisting(employee, employeePosition)) {
+            throw new IllegalArgumentException("The position dates overlap with existing positions.");
+        }
 
         employee.setPosition(command.getPositionName());
         employee.setSalary(command.getSalary());
         employeeRepository.save(employee);
         employeePositionRepository.save(employeePosition);
-        logger.info("Position updated for employee with id: {}", employeeId);
+        logger.info("Position updated for employee with pesel: {}", employeePesel);
         return EmployeePositionDto.fromEntity(employeePosition);
+    }
+
+
+    private boolean isPositionDatesOverlapWithExisting(Employee employee, EmployeePosition newEmployeePosition) {
+        List<EmployeePosition> existingPositions = employeePositionRepository.findByEmployeePesel(employee.getPesel());
+        return existingPositions.stream()
+                .anyMatch(position -> position.getId() != newEmployeePosition.getId()
+                        && !position.getEndDate().isBefore(newEmployeePosition.getStartDate())
+                        && !position.getStartDate().isAfter(newEmployeePosition.getEndDate()));
     }
 
     private void validatePositionDates(EmployeePosition newEmployeePosition) {
         LocalDate newStartDate = newEmployeePosition.getStartDate();
         LocalDate newEndDate = newEmployeePosition.getEndDate();
 
-        if (newStartDate != null && newEndDate != null && newStartDate.isAfter(newEndDate)) {
+        if (newStartDate == null || newEndDate == null) {
+            throw new IllegalArgumentException("Start date and end date cannot be null.");
+        }
+        if (newStartDate.isAfter(newEndDate)) {
             throw new IllegalArgumentException("The start date of the position cannot be later than the end date.");
         }
     }
@@ -62,7 +77,7 @@ public class EmployeePositionServiceImpl implements EmployeePositionService {
     private boolean isPositionOccupied(EmployeePosition newEmployeePosition) {
         List<EmployeePosition> positions = employeePositionRepository.findByPositionName(newEmployeePosition.getPositionName());
         return positions.stream()
-                .anyMatch(position -> !position.getEmployee().getId().equals(newEmployeePosition.getEmployee().getId())
+                .anyMatch(position -> !position.getEmployee().getPesel().equals(newEmployeePosition.getEmployee().getPesel())
                         && isDateRangeOverlap(newEmployeePosition.getStartDate(), newEmployeePosition.getEndDate(),
                         position.getStartDate(), position.getEndDate()));
     }
@@ -71,10 +86,10 @@ public class EmployeePositionServiceImpl implements EmployeePositionService {
         return !start1.isAfter(end2) && !start2.isAfter(end1);
     }
 
-    private Employee getEmployeeById(Long employeeId) {
-        logger.debug("Retrieving employee with id: {}", employeeId);
-        return employeeRepository.findById(employeeId)
+    private Employee getEmployeeByPesel(String employeePesel) {
+        logger.debug("Retrieving employee with pesel: {}", employeePesel);
+        return employeeRepository.findById(employeePesel)
                 .orElseThrow(() -> new EntityNotFoundException(
-                        MessageFormat.format("Employee with id={0} not found", employeeId)));
+                        MessageFormat.format("Employee with pesel={0} not found", employeePesel)));
     }
 }

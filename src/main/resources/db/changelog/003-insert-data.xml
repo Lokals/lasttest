@@ -8,7 +8,6 @@
 
     <changeSet id="insert-dummy-persons" author="mk">
         <insert tableName="person">
-            <column name="id" valueNumeric="1"/>
             <column name="pesel" value="12345678901"/>
             <column name="first_name" value="Jan"/>
             <column name="last_name" value="Kowalski"/>
@@ -19,7 +18,6 @@
             <column name="type" value="student"/>
         </insert>
         <insert tableName="person">
-            <column name="id" valueNumeric="2"/>
             <column name="pesel" value="12345678902"/>
             <column name="first_name" value="Ewa"/>
             <column name="last_name" value="Malinowska"/>
@@ -31,7 +29,6 @@
 
         </insert>
         <insert tableName="person">
-            <column name="id" valueNumeric="3"/>
             <column name="pesel" value="12345678903"/>
             <column name="first_name" value="Piotr"/>
             <column name="last_name" value="Zając"/>
@@ -43,7 +40,6 @@
         </insert>
 
         <insert tableName="person">
-            <column name="id" valueNumeric="4"/>
             <column name="pesel" value="12345678904"/>
             <column name="first_name" value="Marta"/>
             <column name="last_name" value="Wojciechowska"/>
@@ -54,7 +50,6 @@
             <column name="type" value="employee"/>
         </insert>
         <insert tableName="person">
-            <column name="id" valueNumeric="5"/>
             <column name="pesel" value="12345678905"/>
             <column name="first_name" value="Tomasz"/>
             <column name="last_name" value="Szewczyk"/>
@@ -65,7 +60,6 @@
             <column name="type" value="employee"/>
         </insert>
         <insert tableName="person">
-            <column name="id" valueNumeric="6"/>
             <column name="pesel" value="12345678906"/>
             <column name="first_name" value="Katarzyna"/>
             <column name="last_name" value="Baran"/>
@@ -77,7 +71,6 @@
         </insert>
 
         <insert tableName="person">
-            <column name="id" valueNumeric="7"/>
             <column name="pesel" value="12345678907"/>
             <column name="first_name" value="Stefan"/>
             <column name="last_name" value="Nowakowski"/>
@@ -89,7 +82,6 @@
 
         </insert>
         <insert tableName="person">
-            <column name="id" valueNumeric="8"/>
             <column name="pesel" value="12345678908"/>
             <column name="first_name" value="Agata"/>
             <column name="last_name" value="Majewska"/>
@@ -101,7 +93,6 @@
 
         </insert>
         <insert tableName="person">
-            <column name="id" valueNumeric="9"/>
             <column name="pesel" value="12345678909"/>
             <column name="first_name" value="Krzysztof"/>
             <column name="last_name" value="Pawłowski"/>
@@ -116,21 +107,21 @@
 
     <changeSet id="insert-dummy-students" author="mk">
         <insert tableName="student">
-            <column name="id" valueNumeric="1"/>
+            <column name="pesel" value="12345678901"/>
             <column name="university_name" value="Uniwersytet Warszawski"/>
             <column name="year_of_study" valueNumeric="2"/>
             <column name="study_field" value="Informatyka"/>
             <column name="scholarship" valueNumeric="1500"/>
         </insert>
         <insert tableName="student">
-            <column name="id" valueNumeric="2"/>
+            <column name="pesel" value="12345678902"/>
             <column name="university_name" value="Uniwersytet Jagielloński"/>
             <column name="year_of_study" valueNumeric="1"/>
             <column name="study_field" value="Biologia"/>
             <column name="scholarship" valueNumeric="1400"/>
         </insert>
         <insert tableName="student">
-            <column name="id" valueNumeric="3"/>
+            <column name="pesel" value="12345678903"/>
             <column name="university_name" value="Politechnika Warszawska"/>
             <column name="year_of_study" valueNumeric="3"/>
             <column name="study_field" value="Elektrotechnika"/>
@@ -140,19 +131,19 @@
 
     <changeSet id="insert-dummy-employees" author="mk">
         <insert tableName="employee">
-            <column name="id" valueNumeric="4"/>
+            <column name="pesel" value="12345678904"/>
             <column name="employment_date" valueDate="2020-01-15"/>
             <column name="position" value="Programista"/>
             <column name="salary" valueNumeric="5000"/>
         </insert>
         <insert tableName="employee">
-            <column name="id" valueNumeric="5"/>
+            <column name="pesel" value="12345678905"/>
             <column name="employment_date" valueDate="2019-05-20"/>
             <column name="position" value="Analityk Systemowy"/>
             <column name="salary" valueNumeric="4800"/>
         </insert>
         <insert tableName="employee">
-            <column name="id" valueNumeric="6"/>
+            <column name="pesel" value="12345678906"/>
             <column name="employment_date" valueDate="2021-02-01"/>
             <column name="position" value="Kierownik Projektu"/>
             <column name="salary" valueNumeric="5500"/>
@@ -161,17 +152,17 @@
 
     <changeSet id="insert-dummy-retirees" author="mk">
         <insert tableName="retiree">
-            <column name="id" valueNumeric="7"/>
+            <column name="pesel" value="12345678907"/>
             <column name="pension_amount" valueNumeric="2000"/>
             <column name="years_worked" valueNumeric="35"/>
         </insert>
         <insert tableName="retiree">
-            <column name="id" valueNumeric="8"/>
+            <column name="pesel" value="12345678908"/>
             <column name="pension_amount" valueNumeric="2200"/>
             <column name="years_worked" valueNumeric="40"/>
         </insert>
         <insert tableName="retiree">
-            <column name="id" valueNumeric="9"/>
+            <column name="pesel" value="12345678909"/>
             <column name="pension_amount" valueNumeric="2100"/>
             <column name="years_worked" valueNumeric="30"/>
         </insert>

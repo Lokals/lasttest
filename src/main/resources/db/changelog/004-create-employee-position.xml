@@ -11,7 +11,7 @@
             <column name="id" type="bigint" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="employee_id" type="bigint">
+            <column name="employee_pesel" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="position_name" type="varchar(255)"/>
@@ -21,8 +21,8 @@
         </createTable>
         <addForeignKeyConstraint constraintName="fk_employee_position_employee"
                                  baseTableName="employee_position"
-                                 baseColumnNames="employee_id"
+                                 baseColumnNames="employee_pesel"
                                  referencedTableName="employee"
-                                 referencedColumnNames="id"/>
+                                 referencedColumnNames="pesel"/>
     </changeSet>
 </databaseChangeLog>

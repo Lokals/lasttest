@@ -53,9 +53,6 @@ public class StudentUpdateStrategy implements UpdateStrategy<UpdateStudentComman
         if (updateCommand.getLastName() != null){
             student.setLastName(updateCommand.getLastName());
         }
-        if (updateCommand.getPesel() != null){
-            student.setPesel(updateCommand.getPesel());
-        }
         if (updateCommand.getHeight() != null){
             student.setHeight(updateCommand.getHeight());
         }

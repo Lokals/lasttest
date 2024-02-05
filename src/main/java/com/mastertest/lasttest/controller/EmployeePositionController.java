@@ -17,11 +17,11 @@ public class EmployeePositionController {
     private final EmployeePositionService employeePositionService;
 
 
-    @PostMapping("/{employeeId}/positions")
-    public ResponseEntity<EmployeePositionDto> updateEmployeePosition(@PathVariable Long employeeId,
+    @PostMapping("/{employeePesel}/positions")
+    public ResponseEntity<EmployeePositionDto> updateEmployeePosition(@PathVariable String employeePesel,
                                                                       @Valid
                                                                       @RequestBody UpdateEmployeePositionCommand command) {
-        EmployeePositionDto updatedPosition = employeePositionService.updatePositionToEmployee(employeeId, command);
+        EmployeePositionDto updatedPosition = employeePositionService.updatePositionToEmployee(employeePesel, command);
         return ResponseEntity.ok(updatedPosition);
     }
 }

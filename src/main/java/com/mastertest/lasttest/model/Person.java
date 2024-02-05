@@ -15,12 +15,10 @@ import org.hibernate.annotations.DynamicUpdate;
 @DynamicUpdate
 public abstract class Person {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+
     @Version
     private Long version;
-    @Column(unique = true, nullable = false)
+    @Id
     private String pesel;
 
     @NotBlank(message = "First name cannot be blank")
@@ -42,4 +40,7 @@ public abstract class Person {
 
     @NotBlank(message = "Type cannot be blank")
     private String type;
+
+
+
 }

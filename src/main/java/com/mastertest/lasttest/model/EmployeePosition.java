@@ -15,7 +15,7 @@ public class EmployeePosition {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "employee_id")
+    @JoinColumn(name = "employee_pesel")
     private Employee employee;
 
     @Column(unique = true, nullable = false)

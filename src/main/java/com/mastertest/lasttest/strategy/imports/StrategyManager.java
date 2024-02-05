@@ -23,7 +23,7 @@ public class StrategyManager {
     }
 
     private String extractTypeFromStrategyName(String strategyName) {
-        return strategyName.replaceAll("ImportStrategy$", "").toLowerCase();
+        return strategyName.replaceAll("ImportStrategy.*$", "").toLowerCase();
     }
 
     public ImportStrategy<?> getStrategy(String type) {

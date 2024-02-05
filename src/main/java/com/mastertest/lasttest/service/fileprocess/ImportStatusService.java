@@ -46,6 +46,17 @@ public class ImportStatusService {
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void updateRowsForImport(Long id, Long processedRows) {
+        logger.info("Updating rows import status for id: {}", id);
+        ImportStatus importStatus = getImportStatus(id);
+        Long processedRowsInImport = getRowsImportStatus(id);
+        importStatus.setProcessedRows(processedRowsInImport + processedRows);
+        importStatusRepository.save(importStatus);
+        logger.debug("Import status updated for id: {}", id);
+
+    }
+
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
     public Long getRowsImportStatus(Long id) {
         return importStatusRepository.findProcessedRowsById(id);
     }

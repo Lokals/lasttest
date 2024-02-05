@@ -7,6 +7,7 @@ import com.mastertest.lasttest.model.factory.StatusFile;
 import com.mastertest.lasttest.repository.ImportStatusRepository;
 import com.mastertest.lasttest.service.fileprocess.CsvImportService;
 import com.mastertest.lasttest.service.fileprocess.ImportStatusService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,13 +28,17 @@ public class ImportFileController {
 
 
     @PostMapping("/employees")
+    @Transactional
     public ResponseEntity<ImportStatus> uploadFile(@RequestParam("file") MultipartFile file) throws IOException {
-        if (!importStatusRepository.findByStatuses(List.of(StatusFile.INPROGRESS, StatusFile.PENDING)).isEmpty()) {
-            throw new FileProcessingException("Already of some import is during processing");
+        synchronized (this) {
+            if (!importStatusRepository.findByStatuses(List.of(StatusFile.INPROGRESS, StatusFile.PENDING)).isEmpty()) {
+                throw new FileProcessingException("Already of some import is during processing");
+            }
+            ImportStatus importStatus = importStatusService.createNewImportStatus(file.getOriginalFilename());
+
+            csvImportService.importCsv(file, importStatus);
+            return ResponseEntity.ok(importStatusService.getImportStatus(importStatus.getId()));
         }
-        ImportStatus importStatus = importStatusService.createNewImportStatus(file.getOriginalFilename());
-        csvImportService.importCsv(file, importStatus);
-        return ResponseEntity.ok(importStatusService.getImportStatus(importStatus.getId()));
     }
 
     @GetMapping("{id}/importstatus")

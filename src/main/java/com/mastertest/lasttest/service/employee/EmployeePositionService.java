@@ -5,5 +5,5 @@ import com.mastertest.lasttest.model.dto.command.UpdateEmployeePositionCommand;
 
 public interface EmployeePositionService {
 
-    EmployeePositionDto updatePositionToEmployee(Long employeeId, UpdateEmployeePositionCommand command);
+    EmployeePositionDto updatePositionToEmployee(String employeePesel, UpdateEmployeePositionCommand command);
 }

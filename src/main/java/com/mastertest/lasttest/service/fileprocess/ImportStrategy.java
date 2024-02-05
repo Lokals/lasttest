@@ -11,7 +11,10 @@ public interface ImportStrategy<T extends PersonDto> {
     void validateParseAndSave(String record) throws ParseException;
     PersonDto validateAndSave(CreatePersonCommand<?> personDto);
 
-    void addToBatch(String record) throws ParseException;
-    void processBatch(ImportStatus importStatus);
+    void  addToBatch(String record, ImportStatus importStatus) throws ParseException;
+    void processBatch();
     Long getBatchSize();
+
+    void clearBatch();
+
 }

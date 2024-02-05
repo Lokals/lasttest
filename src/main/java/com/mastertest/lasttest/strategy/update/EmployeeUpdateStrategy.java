@@ -52,9 +52,6 @@ public class EmployeeUpdateStrategy implements UpdateStrategy<UpdateEmployeeComm
         if (updateCommand.getLastName() != null) {
             employee.setLastName(updateCommand.getLastName());
         }
-        if (updateCommand.getPesel() != null) {
-            employee.setPesel(updateCommand.getPesel());
-        }
         if (updateCommand.getHeight() != null) {
             employee.setHeight(updateCommand.getHeight());
         }

@@ -243,7 +243,7 @@ class PersonControllerTest {
     @Test
     @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
     void testUpdatePerson_Successful() throws Exception {
-        Long personId = student.getId();
+        String personId = student.getPesel();
         Map<String, Object> updateFields = new HashMap<>();
         updateFields.put("firstName", "UpdatedName");
         updateFields.put("lastName", "UpdatedLastName");
@@ -286,7 +286,7 @@ class PersonControllerTest {
     @Test
     @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
     void testUpdatePerson_InvalidEmail_ResultNotSuccessful() throws Exception {
-        Long personId = student.getId();
+        String personId = student.getPesel();
         Map<String, Object> updateFields = new HashMap<>();
         updateFields.put("email", "wrong.mail.com");
         ObjectMapper objectMapper = new ObjectMapper();

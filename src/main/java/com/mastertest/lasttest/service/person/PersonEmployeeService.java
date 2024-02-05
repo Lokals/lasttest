@@ -1,28 +1,20 @@
 package com.mastertest.lasttest.service.person;
 
 import com.mastertest.lasttest.model.Employee;
-import com.mastertest.lasttest.repository.EmployeeRepository;
 import com.mastertest.lasttest.repository.PersonRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class PersonEmployeeService {
 
     private final PersonRepository personRepository;
-    private final EmployeeRepository employeeRepository;
 
-    @Retryable(maxAttempts = 4, backoff = @Backoff(delay = 500))
-    @Transactional(Transactional.TxType.REQUIRES_NEW)
-    public void savePersonsAndEmployee(List<Employee> dtos) {
-
+    public void savePersonsAndEmployee(Set<Employee> dtos) {
         personRepository.saveAll(dtos);
-
     }
+
 }

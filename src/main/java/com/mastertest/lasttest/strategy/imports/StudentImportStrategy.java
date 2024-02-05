@@ -7,9 +7,7 @@ import com.mastertest.lasttest.model.dto.PersonDto;
 import com.mastertest.lasttest.model.dto.StudentDto;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
 import com.mastertest.lasttest.model.factory.ImportStatus;
-import com.mastertest.lasttest.model.factory.StatusFile;
 import com.mastertest.lasttest.repository.PersonRepository;
-import com.mastertest.lasttest.service.fileprocess.ImportStatusService;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
 import com.mastertest.lasttest.service.person.PersonStudentService;
 import com.mastertest.lasttest.validator.PersonValidator;
@@ -19,13 +17,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 @RequiredArgsConstructor
 @Component
@@ -35,22 +34,33 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
     private final PersonValidator personValidator;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     private final PersonRepository personRepository;
-    private final ImportStatusService importStatusService;
     private final PersonStudentService personStudentService;
 
     private static final Logger logger = LoggerFactory.getLogger(StudentImportStrategy.class);
-    private final CopyOnWriteArrayList<Student> batchList = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Map<String, Object>> personBatch = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Map<String, Object>> studentBatch = new CopyOnWriteArrayList<>();
+
+    private final CopyOnWriteArraySet<Student> personRepoBatch = new CopyOnWriteArraySet<>();
+
+    private final String PERSON_SQL = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
+    private final String STUDENT_SQL = "INSERT INTO student (pesel, university_name, year_of_study, study_field, scholarship) VALUES (:pesel, :university_name, :year_of_study, :study_field, :scholarship)";
 
     @Override
     public Long getBatchSize() {
-        return (long) batchList.size();
+        return (long) personRepoBatch.size();
+
+    }
+
+    @Override
+    public void clearBatch() {
+            personRepoBatch.clear();
     }
 
     @Override
     public void validateParseAndSave(String record) {
         Student student = parseCsvToDto(record);
         validate(student);
-//        saveStudent(studentDto);
+        saveStudent(StudentDto.fromEntity(student));
     }
 
     @Override
@@ -60,23 +70,50 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
         return saveStudent(studentDto);
     }
 
+
     @Override
-    public void addToBatch(String record) {
+    public void addToBatch(String record, ImportStatus importStatus) {
         Student student = parseCsvToDto(record);
         validate(student);
-        batchList.add(student);
+        personRepoBatch.add(student);
     }
 
+
     @Override
-    public void processBatch(ImportStatus importStatus) {
+    public void processBatch() {
+        logger.debug("Processing Employee batch with size: {} on thread: {}", personRepoBatch.size(), Thread.currentThread().getName());
+        personStudentService.savePersonsAndStudents(personRepoBatch);
+        clearBatch();
+    }
 
-        if (!batchList.isEmpty()) {
-            logger.debug("BATCH SIZE COMPILATED: {}", batchList.size());
-            personStudentService.savePersonsAndStudents(new ArrayList<>(batchList));
-            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + batchList.size());
+    private void processBatchInternal() {
+        logger.debug("Processing Employee batch with size: {} on thread: {}", personBatch.size(), Thread.currentThread().getName());
+        namedParameterJdbcTemplate.batchUpdate(PERSON_SQL, personBatch.toArray(new Map[0]));
+        namedParameterJdbcTemplate.batchUpdate(STUDENT_SQL, studentBatch.toArray(new Map[0]));
+    }
 
+    private void processPersonToBatch(Student student) {
+        logger.debug("Processing Student batch with size: {} on thread: {}", personBatch.size(), Thread.currentThread().getName());
+        if (student != null) {
+            Map<String, Object> personParams = new HashMap<>();
+            Map<String, Object> studentParams = new HashMap<>();
+
+            personParams.put("pesel", student.getPesel());
+            personParams.put("first_name", student.getFirstName());
+            personParams.put("last_name", student.getLastName());
+            personParams.put("height", student.getHeight());
+            personParams.put("weight", student.getWeight());
+            personParams.put("email", student.getEmail());
+            personParams.put("type", "student");
+            personParams.put("version", 0L);
+            studentParams.put("pesel", student.getPesel());
+            studentParams.put("university_name", student.getUniversityName());
+            studentParams.put("year_of_study", student.getYearOfStudy());
+            studentParams.put("study_field", student.getStudyField());
+            studentParams.put("scholarship", student.getScholarship());
+            studentBatch.add(studentParams);
+            personBatch.add(personParams);
         }
-        batchList.clear();
     }
 
 
@@ -139,14 +176,11 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
         parameters.put("version", 0L);
         logger.debug("Generated parameters: {}", parameters);
         String insertPersonSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
-        KeyHolder keyHolder = new GeneratedKeyHolder();
-        namedParameterJdbcTemplate.update(insertPersonSql, new MapSqlParameterSource(parameters), keyHolder);
 
-//        Long personId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-        Long personId = Objects.requireNonNull(keyHolder.getKey()).longValue();
+        namedParameterJdbcTemplate.update(insertPersonSql, new MapSqlParameterSource(parameters));
+        
+        String insertStudentSql = "INSERT INTO student (pesel, university_name, year_of_study, study_field, scholarship) VALUES (:pesel, :university_name, :year_of_study, :study_field, :scholarship)";
 
-        String insertStudentSql = "INSERT INTO student (id, university_name, year_of_study, study_field, scholarship) VALUES (:id, :university_name, :year_of_study, :study_field, :scholarship)";
-        parameters.put("id", personId);
         namedParameterJdbcTemplate.update(insertStudentSql, parameters);
         return studentDto;
     }
