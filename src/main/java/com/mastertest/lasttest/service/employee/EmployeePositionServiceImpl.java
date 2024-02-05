@@ -41,6 +41,9 @@ public class EmployeePositionServiceImpl implements EmployeePositionService {
         if (isPositionOccupied(employeePosition)) {
             throw new IllegalArgumentException("The position " + command.getPositionName() + " is already occupied during the specified period.");
         }
+        if (isPositionDatesOverlapWithExisting(employee, employeePosition)) {
+            throw new IllegalArgumentException("The position dates overlap with existing positions.");
+        }
 
         employee.setPosition(command.getPositionName());
         employee.setSalary(command.getSalary());
@@ -50,11 +53,23 @@ public class EmployeePositionServiceImpl implements EmployeePositionService {
         return EmployeePositionDto.fromEntity(employeePosition);
     }
 
+
+    private boolean isPositionDatesOverlapWithExisting(Employee employee, EmployeePosition newEmployeePosition) {
+        List<EmployeePosition> existingPositions = employeePositionRepository.findByEmployeePesel(employee.getPesel());
+        return existingPositions.stream()
+                .anyMatch(position -> position.getId() != newEmployeePosition.getId()
+                        && !position.getEndDate().isBefore(newEmployeePosition.getStartDate())
+                        && !position.getStartDate().isAfter(newEmployeePosition.getEndDate()));
+    }
+
     private void validatePositionDates(EmployeePosition newEmployeePosition) {
         LocalDate newStartDate = newEmployeePosition.getStartDate();
         LocalDate newEndDate = newEmployeePosition.getEndDate();
 
-        if (newStartDate != null && newEndDate != null && newStartDate.isAfter(newEndDate)) {
+        if (newStartDate == null || newEndDate == null) {
+            throw new IllegalArgumentException("Start date and end date cannot be null.");
+        }
+        if (newStartDate.isAfter(newEndDate)) {
             throw new IllegalArgumentException("The start date of the position cannot be later than the end date.");
         }
     }

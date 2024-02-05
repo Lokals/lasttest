@@ -1,21 +1,18 @@
 package com.mastertest.lasttest.strategy.imports;
 
 import com.mastertest.lasttest.configuration.ConversionUtils;
-import com.mastertest.lasttest.configuration.PersonManagementProperties;
 import com.mastertest.lasttest.model.Employee;
 import com.mastertest.lasttest.model.Person;
 import com.mastertest.lasttest.model.dto.EmployeeDto;
 import com.mastertest.lasttest.model.dto.PersonDto;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
 import com.mastertest.lasttest.model.factory.ImportStatus;
-import com.mastertest.lasttest.model.factory.StatusFile;
 import com.mastertest.lasttest.repository.PersonRepository;
 import com.mastertest.lasttest.service.fileprocess.ImportStatusService;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
 import com.mastertest.lasttest.service.person.PersonEmployeeService;
 import com.mastertest.lasttest.validator.PersonValidator;
 import jakarta.persistence.EntityExistsException;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.time.DateParser;
 import org.apache.commons.lang3.time.FastDateFormat;
@@ -23,8 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
@@ -33,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 @RequiredArgsConstructor
 @Component
@@ -48,17 +44,15 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
     private static final DateParser DATE_PARSER = FastDateFormat.getInstance("yyyy-MM-dd");
     private final CopyOnWriteArrayList<Map<String, Object>> personBatch = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<Map<String, Object>> employeeBatch = new CopyOnWriteArrayList<>();
-    private final CopyOnWriteArrayList<Employee> personRepoBatch = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArraySet<Employee> personRepoBatch = new CopyOnWriteArraySet<>();
 
-
-    private final PersonManagementProperties properties;
     private final String PERSON_SQL = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
     private final String EMPLOYEE_SQL = "INSERT INTO employee (pesel, employment_date, position, salary) VALUES (:pesel, :employment_date, :position, :salary)";
 
 
     @Override
     public Long getBatchSize() {
-        return (long) personBatch.size();
+        return (long) personRepoBatch.size();
     }
 
     @Override
@@ -66,13 +60,13 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
         personBatch.clear();
         personRepoBatch.clear();
         employeeBatch.clear();
+
     }
 
     @Override
     public void validateParseAndSave(String record) throws ParseException {
         Employee employeeDto = parseCsvToDto(record);
         validate(employeeDto);
-//        saveEmployee(employeeDto);
     }
 
     @Override
@@ -86,26 +80,15 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
     public void addToBatch(String record, ImportStatus importStatus) throws ParseException {
         Employee employee = parseCsvToDto(record);
         validate(employee);
-//        processPersonToBatch(employee);
         personRepoBatch.add(employee);
-        if (getBatchSize() >= properties.getBatchSize()) {
-            processBatch();
-            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + getBatchSize());
 
-        }
     }
 
-    @Retryable(maxAttempts = 4, backoff = @Backoff(delay = 500))
-    @Transactional
     @Override
     public void processBatch() {
-//            processBatchInternal();
-        trigger();
-        clearBatch();
-    }
-
-    private void trigger() {
+        logger.debug("Processing Employee batch with size: {} on thread: {}", personRepoBatch.size(), Thread.currentThread().getName());
         employeeService.savePersonsAndEmployee(personRepoBatch);
+        clearBatch();
     }
 
     private void processPersonToBatch(Employee employee) {
@@ -135,7 +118,6 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
 
         namedParameterJdbcTemplate.batchUpdate(EMPLOYEE_SQL, employeeBatch.toArray(new Map[0]));
 
-//        importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + personBatch.size());
     }
 
 
@@ -196,10 +178,7 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
         String insertPersonSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
         namedParameterJdbcTemplate.update(insertPersonSql, parameters);
 
-        Long personId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-
-        String insertEmployeeSql = "INSERT INTO employee (id, employment_date, position, salary) VALUES (:id, :employment_date, :position, :salary)";
-        parameters.put("id", personId);
+        String insertEmployeeSql = "INSERT INTO employee (pesel, employment_date, position, salary) VALUES (:pesel, :employment_date, :position, :salary)";
         namedParameterJdbcTemplate.update(insertEmployeeSql, parameters);
         return employeeDto;
     }

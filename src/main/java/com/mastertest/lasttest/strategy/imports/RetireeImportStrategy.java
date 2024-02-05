@@ -8,21 +8,17 @@ import com.mastertest.lasttest.model.dto.PersonDto;
 import com.mastertest.lasttest.model.dto.RetireeDto;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
 import com.mastertest.lasttest.model.factory.ImportStatus;
-import com.mastertest.lasttest.model.factory.StatusFile;
 import com.mastertest.lasttest.repository.PersonRepository;
 import com.mastertest.lasttest.service.fileprocess.ImportStatusService;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
 import com.mastertest.lasttest.service.person.PersonRetireeService;
 import com.mastertest.lasttest.validator.PersonValidator;
 import jakarta.persistence.EntityExistsException;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
@@ -31,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 @RequiredArgsConstructor
 @Component
@@ -46,7 +43,7 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
     private static final Logger logger = LoggerFactory.getLogger(RetireeImportStrategy.class);
     private final PersonManagementProperties properties;
     private final CopyOnWriteArrayList<Map<String, Object>> personBatch = new CopyOnWriteArrayList<>();
-    private final CopyOnWriteArrayList<Retiree> personRepoBatch = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArraySet<Retiree> personRepoBatch = new CopyOnWriteArraySet<>();
     private final CopyOnWriteArrayList<Map<String, Object>> retireeBatch = new CopyOnWriteArrayList<>();
 
     String RETIREE_SQL = "INSERT INTO retiree (pesel, pension_amount, years_worked) VALUES (:pesel, :pension_amount, :years_worked)";
@@ -54,8 +51,7 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
 
     @Override
     public Long getBatchSize() {
-        return (long) personBatch.size();
-
+        return (long) personRepoBatch.size();
     }
 
     @Override
@@ -63,13 +59,13 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
         personBatch.clear();
         personRepoBatch.clear();
         retireeBatch.clear();
+
     }
 
     @Override
     public void validateParseAndSave(String record) throws ParseException {
         Retiree retiree = parseCsvToDto(record);
         validate(retiree);
-//        saveRetiree(retireeDto);
     }
 
     @Override
@@ -79,38 +75,27 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
         return saveRetiree(retireeDto);
     }
 
+
     @Override
     public void addToBatch(String record, ImportStatus importStatus) throws ParseException {
         Retiree retiree = parseCsvToDto(record);
         validate(retiree);
         personRepoBatch.add(retiree);
-//        processPersonToBatch(retiree);
-        if (getBatchSize() >= properties.getBatchSize()){
-            processBatch();
-            importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + getBatchSize());
 
-        }
     }
 
-    @Retryable(maxAttempts = 4, backoff = @Backoff(delay = 500))
-    @Transactional
+
     @Override
     public void processBatch() {
-//        processBatchInternal();
-        trigger();
-        clearBatch();
-    }
-
-    private void trigger(){
+        logger.debug("Processing Employee batch with size: {} on thread: {}", personRepoBatch.size(), Thread.currentThread().getName());
         personRetireeService.savePersonsAndERetiree(personRepoBatch);
+        clearBatch();
     }
 
     private void processBatchInternal() {
         logger.debug("Processing Employee batch with size: {} on thread: {}", personBatch.size(), Thread.currentThread().getName());
         namedParameterJdbcTemplate.batchUpdate(PERSON_SQL, personBatch.toArray(new Map[0]));
         namedParameterJdbcTemplate.batchUpdate(RETIREE_SQL, retireeBatch.toArray(new Map[0]));
-
-//        importStatusService.updateImportStatus(importStatus.getId(), StatusFile.INPROGRESS, importStatusService.getRowsImportStatus(importStatus.getId()) + personBatch.size());
     }
 
     private void processPersonToBatch(Retiree retiree) {
@@ -131,7 +116,7 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
             retireeBatch.add(retireeParams);
             personBatch.add(personParams);
         }
-     }
+    }
 
 
     private Retiree parseCsvToDto(String csvLine) throws ParseException {
@@ -190,10 +175,8 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
         String insertPersonSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
         namedParameterJdbcTemplate.update(insertPersonSql, parameters);
 
-        Long personId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        String insertRetireeSql = "INSERT INTO retiree (pesel, years_worked, pension_amount) VALUES (:pesel, :years_worked, :pension_amount)";
 
-        String insertRetireeSql = "INSERT INTO retiree (id, years_worked, pension_amount) VALUES (:id, :years_worked, :pension_amount)";
-        parameters.put("id", personId);
         namedParameterJdbcTemplate.update(insertRetireeSql, parameters);
         return retireeDto;
     }

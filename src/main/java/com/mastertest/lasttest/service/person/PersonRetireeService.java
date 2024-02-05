@@ -5,7 +5,7 @@ import com.mastertest.lasttest.repository.PersonRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.Set;
 
 
 @Service
@@ -14,10 +14,8 @@ public class PersonRetireeService {
 
     private final PersonRepository personRepository;
 
-//    @Retryable(maxAttempts = 4, backoff = @Backoff(delay = 500))
-//    @Transactional(Transactional.TxType.REQUIRES_NEW)
-    public void savePersonsAndERetiree(List<Retiree> dtos) {
 
+    public void savePersonsAndERetiree(Set<Retiree> dtos) {
         personRepository.saveAll(dtos);
 
     }
