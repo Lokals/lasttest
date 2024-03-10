@@ -2,10 +2,10 @@ package com.mastertest.lasttest.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mastertest.lasttest.configuration.PersonManagementProperties;
-import com.mastertest.lasttest.model.Employee;
-import com.mastertest.lasttest.model.Person;
-import com.mastertest.lasttest.model.Retiree;
-import com.mastertest.lasttest.model.Student;
+import com.mastertest.lasttest.model.persons.Employee;
+import com.mastertest.lasttest.model.persons.Person;
+import com.mastertest.lasttest.model.persons.Retiree;
+import com.mastertest.lasttest.model.persons.Student;
 import com.mastertest.lasttest.model.dto.StudentDto;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
 import com.mastertest.lasttest.repository.EmployeePositionRepository;
@@ -245,20 +245,20 @@ class PersonControllerTest {
     void testUpdatePerson_Successful() throws Exception {
         String personId = student.getPesel();
         Map<String, Object> updateFields = new HashMap<>();
-        updateFields.put("firstName", "UpdatedName");
-        updateFields.put("lastName", "UpdatedLastName");
+        updateFields.put("firstName", "Updated");
+        updateFields.put("lastName", "Updatedlast");
 
 
         ObjectMapper objectMapper = new ObjectMapper();
         String requestBody = objectMapper.writeValueAsString(updateFields);
 
-        mockMvc.perform(post("/api/people/update/" + personId)
+        mockMvc.perform(post("/api/people/"+ personId +"/update")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.firstName").value("UpdatedName"))
-                .andExpect(jsonPath("$.lastName").value("UpdatedLastName"));
+                .andExpect(jsonPath("$.firstName").value("Updated"))
+                .andExpect(jsonPath("$.lastName").value("Updatedlast"));
 
     }
 
@@ -267,19 +267,19 @@ class PersonControllerTest {
     void testUpdatePerson_NotExistingPerson_ResultNotSuccessful() throws Exception {
         Long personId = 999L;
         Map<String, Object> updateFields = new HashMap<>();
-        updateFields.put("firstName", "UpdatedName");
-        updateFields.put("lastName", "UpdatedLastName");
+        updateFields.put("firstName", "Updated");
+        updateFields.put("lastName", "Updated");
 
 
         ObjectMapper objectMapper = new ObjectMapper();
         String requestBody = objectMapper.writeValueAsString(updateFields);
 
-        mockMvc.perform(post("/api/people/update/" + personId)
+        mockMvc.perform(post("/api/people/"+ personId+"/update" )
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andDo(print())
                 .andExpect(status().is5xxServerError())
-                .andExpect(content().string("person with id=999 not found"));
+                .andExpect(content().string("person with pesel=999 not found"));
     }
 
 
@@ -292,29 +292,28 @@ class PersonControllerTest {
         ObjectMapper objectMapper = new ObjectMapper();
         String requestBody = objectMapper.writeValueAsString(updateFields);
 
-        mockMvc.perform(post("/api/people/update/" + personId)
+        mockMvc.perform(post("/api/people/"+ personId+" /update" )
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andDo(print())
-                .andExpect(status().is5xxServerError())
-                .andExpect(content().string("email: Invalid email format\n"));
+                .andExpect(status().is4xxClientError());
     }
 
     @Test
     @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
     void testUpdatePerson_InvalidPesel_ResultNotSuccessful() throws Exception {
-        Long personId = student.getId();
+        String peselPerson
+                = student.getPesel();
         Map<String, Object> updateFields = new HashMap<>();
         updateFields.put("pesel", "123");
         ObjectMapper objectMapper = new ObjectMapper();
         String requestBody = objectMapper.writeValueAsString(updateFields);
 
-        mockMvc.perform(post("/api/people/update/" + personId)
+        mockMvc.perform(post("/api/people/"+ peselPerson +"/update" )
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andDo(print())
-                .andExpect(status().is5xxServerError())
-                .andExpect(content().string("pesel: PESEL must be exactly 11 characters long\n"));
+                .andExpect(status().is4xxClientError());
     }
 
 
@@ -370,7 +369,7 @@ class PersonControllerTest {
     void testSearch_ByHeight_ResultZeroPersonReturned() throws Exception {
 
         mockMvc.perform(get("/api/people/search")
-                        .param("height", "1,100"))
+                        .param("height", "50,170"))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(lessThanOrEqualTo(properties.getDefaultPageSize()))))

@@ -1,6 +1,6 @@
 package com.mastertest.lasttest.repository;
 
-import com.mastertest.lasttest.model.EmployeePosition;
+import com.mastertest.lasttest.model.position.EmployeePosition;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

@@ -1,7 +1,7 @@
 package com.mastertest.lasttest.service.person;
 
 
-import com.mastertest.lasttest.model.Student;
+import com.mastertest.lasttest.model.persons.Student;
 import com.mastertest.lasttest.repository.PersonRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

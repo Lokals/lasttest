@@ -8,7 +8,7 @@
     <changeSet id="1" author="mk">
         <createTable tableName="person">
             <column name="pesel" type="varchar(11)">
-                <constraints primaryKey="true" nullable="false" unique="true"/>
+                <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="first_name" type="varchar(255)"/>
             <column name="last_name" type="varchar(255)"/>
@@ -16,55 +16,17 @@
             <column name="weight" type="double"/>
             <column name="email" type="varchar(255)"/>
             <column name="type" type="varchar(31)"/>
-        </createTable>
-    </changeSet>
-
-    <changeSet id="2" author="mk">
-        <createTable tableName="student">
-            <column name="pesel" type="varchar(11)">
-                <constraints nullable="false" foreignKeyName="fk_student_person"/>
-            </column>
             <column name="university_name" type="varchar(255)"/>
             <column name="year_of_study" type="int"/>
             <column name="study_field" type="varchar(255)"/>
             <column name="scholarship" type="double"/>
-        </createTable>
-        <addForeignKeyConstraint constraintName="fk_student_person"
-                                 baseTableName="student"
-                                 baseColumnNames="pesel"
-                                 referencedTableName="person"
-                                 referencedColumnNames="pesel"/>
-    </changeSet>
-
-    <changeSet id="3" author="mk">
-        <createTable tableName="employee">
-            <column name="pesel" type="varchar(11)">
-                <constraints nullable="false" foreignKeyName="fk_employee_person"/>
-            </column>
             <column name="employment_date" type="date"/>
             <column name="position" type="varchar(255)"/>
             <column name="salary" type="double"/>
-        </createTable>
-        <addForeignKeyConstraint constraintName="fk_employee_person"
-                                 baseTableName="employee"
-                                 baseColumnNames="pesel"
-                                 referencedTableName="person"
-                                 referencedColumnNames="pesel"/>
-    </changeSet>
-
-    <changeSet id="4" author="mk">
-        <createTable tableName="retiree">
-            <column name="pesel" type="varchar(11)">
-                <constraints nullable="false" foreignKeyName="fk_retiree_person"/>
-            </column>
             <column name="pension_amount" type="double"/>
             <column name="years_worked" type="int"/>
         </createTable>
-        <addForeignKeyConstraint constraintName="fk_retiree_person"
-                                 baseTableName="retiree"
-                                 baseColumnNames="pesel"
-                                 referencedTableName="person"
-                                 referencedColumnNames="pesel"/>
     </changeSet>
-
 </databaseChangeLog>
+
+

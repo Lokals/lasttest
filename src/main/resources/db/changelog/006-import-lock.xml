@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="create-import-lock-table" author="mk">
+        <createTable tableName="import_lock">
+            <column name="id" type="int">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="is_locked" type="boolean" defaultValue="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locked_at" type="timestamp"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="init-import-lock-table" author="mk">
+        <insert tableName="import_lock">
+            <column name="id" valueNumeric="1"/>
+            <column name="is_locked" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+
+</databaseChangeLog>

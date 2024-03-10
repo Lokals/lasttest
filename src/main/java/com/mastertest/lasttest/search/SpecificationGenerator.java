@@ -1,7 +1,7 @@
 package com.mastertest.lasttest.search;
 
-import com.mastertest.lasttest.model.Person;
-import com.mastertest.lasttest.model.SearchCriteria;
+import com.mastertest.lasttest.model.persons.Person;
+import com.mastertest.lasttest.model.search.SearchCriteria;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 

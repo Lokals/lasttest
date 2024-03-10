@@ -1,73 +1,64 @@
 package com.mastertest.lasttest.strategy.update;
 
 import com.mastertest.lasttest.configuration.ConversionUtils;
-import com.mastertest.lasttest.model.Person;
-import com.mastertest.lasttest.model.Student;
-import com.mastertest.lasttest.model.dto.PersonDto;
+import com.mastertest.lasttest.model.persons.Student;
 import com.mastertest.lasttest.model.dto.StudentDto;
 import com.mastertest.lasttest.model.dto.command.UpdatePersonCommand;
 import com.mastertest.lasttest.model.dto.command.UpdateStudentCommand;
-import com.mastertest.lasttest.repository.PersonRepository;
+import com.mastertest.lasttest.repository.StudentRepository;
 import com.mastertest.lasttest.service.person.UpdateStrategy;
 import com.mastertest.lasttest.validator.PersonValidator;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
+import java.text.MessageFormat;
 
 @RequiredArgsConstructor
 @Component
-public class StudentUpdateStrategy implements UpdateStrategy<UpdateStudentCommand> {
+public class StudentUpdateStrategy implements UpdateStrategy<StudentDto, UpdateStudentCommand> {
 
-    private final PersonRepository personRepository;
-    private final PersonValidator personValidator;
+    private final StudentRepository studentRepository;
+    private final PersonValidator validator;
 
 
     @Override
-    public PersonDto updateAndValidate(Map<String, Object> updateCommand, Person person) {
+    public StudentDto updateAndValidate(UpdatePersonCommand<UpdateStudentCommand> updatePersonCommand, String pesel) {
+        UpdateStudentCommand studentCommand = ConversionUtils.convertCommandToCommand(updatePersonCommand.getDetails(), UpdateStudentCommand.class);
 
-        Student student = (Student) person;
-        UpdateStudentCommand studentCommand = ConversionUtils.convertMapToCommand(updateCommand, UpdateStudentCommand.class);
-
-        updateCommonFields(studentCommand, student);
-
-        if (studentCommand.getUniversityName() != null) {
-            student.setUniversityName(studentCommand.getUniversityName());
+        Student student = studentRepository.findById(pesel).orElseThrow(() -> new EntityNotFoundException(
+                MessageFormat.format("person with pesel={0} not found", pesel)));
+        if (updatePersonCommand.getFirstName() != null) {
+            student.setFirstName(updatePersonCommand.getFirstName());
         }
-        if (studentCommand.getYearOfStudy() != null) {
-            student.setYearOfStudy(studentCommand.getYearOfStudy());
+        if (updatePersonCommand.getLastName() != null) {
+            student.setLastName(updatePersonCommand.getLastName());
         }
-        if (studentCommand.getStudyField() != null) {
-            student.setStudyField(studentCommand.getStudyField());
+        if (updatePersonCommand.getHeight() != null) {
+            student.setHeight(updatePersonCommand.getHeight());
         }
-        if (studentCommand.getScholarship() != null) {
-            student.setScholarship(studentCommand.getScholarship());
+        if (updatePersonCommand.getWeight() != null) {
+            student.setWeight(updatePersonCommand.getWeight());
         }
-        return convertToPersonDto(student);
-    }
-
-    private void updateCommonFields(UpdatePersonCommand updateCommand, Student student) {
-        if (updateCommand.getFirstName() != null){
-            student.setFirstName(updateCommand.getFirstName());
+        if (updatePersonCommand.getEmail() != null) {
+            student.setEmail(updatePersonCommand.getEmail());
         }
-        if (updateCommand.getLastName() != null){
-            student.setLastName(updateCommand.getLastName());
+        if (studentCommand != null) {
+            validator.validate(studentCommand);
+            if (studentCommand.getUniversityName() != null) {
+                student.setUniversityName(studentCommand.getUniversityName());
+            }
+            if (studentCommand.getYearOfStudy() != null) {
+                student.setYearOfStudy(studentCommand.getYearOfStudy());
+            }
+            if (studentCommand.getStudyField() != null) {
+                student.setStudyField(studentCommand.getStudyField());
+            }
+            if (studentCommand.getScholarship() != null) {
+                student.setScholarship(studentCommand.getScholarship());
+            }
         }
-        if (updateCommand.getHeight() != null){
-            student.setHeight(updateCommand.getHeight());
-        }
-        if (updateCommand.getWeight() != null){
-            student.setWeight(updateCommand.getWeight());
-        }
-        if (updateCommand.getEmail() != null){
-            student.setEmail(updateCommand.getEmail());
-        }
-    }
-
-    private PersonDto convertToPersonDto(Student student) {
-        StudentDto studentDto = StudentDto.fromEntity(student);
-        personValidator.validate(studentDto);
-        personRepository.save(student);
-        return studentDto;
+        studentRepository.save(student);
+        return StudentDto.fromEntity(student);
     }
 }

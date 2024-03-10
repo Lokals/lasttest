@@ -1,7 +1,7 @@
 package com.mastertest.lasttest.controller;
 
-import com.mastertest.lasttest.model.factory.ImportStatus;
-import com.mastertest.lasttest.model.factory.StatusFile;
+import com.mastertest.lasttest.model.importfile.ImportStatus;
+import com.mastertest.lasttest.model.importfile.StatusFile;
 import com.mastertest.lasttest.repository.ImportStatusRepository;
 import com.mastertest.lasttest.service.fileprocess.CsvImportService;
 import com.mastertest.lasttest.service.fileprocess.ImportStatusService;
@@ -56,7 +56,7 @@ class ImportFileControllerTest {
         importStatusRepository.deleteAll();
         ImportStatus testStatus = createAndPersistTestImportStatus();
 
-        mockMvc.perform(get("/api/import/importstatus/" + testStatus.getId()))
+        mockMvc.perform(get("/api/import/" +  testStatus.getId() +"/importstatus"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(testStatus.getId()))
                 .andExpect(jsonPath("$.status").value(testStatus.getStatus().toString()))
@@ -87,11 +87,11 @@ class ImportFileControllerTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        Long importStatusId = Long.valueOf(result.getResponse().getContentAsString());
-        Optional<ImportStatus> importStatus = importStatusRepository.findById(importStatusId);
+
+        Optional<ImportStatus> importStatus = importStatusRepository.findById(1L);
 
         assertTrue(importStatus.isPresent());
-        assertEquals(StatusFile.PENDING, importStatus.get().getStatus());
+        assertEquals(StatusFile.COMPLETED, importStatus.get().getStatus());
         assertEquals("test.csv", importStatus.get().getFilename());
     }
 
@@ -103,7 +103,7 @@ class ImportFileControllerTest {
         importStatus.setStatus(StatusFile.COMPLETED);
         importStatus = importStatusRepository.save(importStatus);
 
-        mockMvc.perform(get("/api/import/importstatus/" + importStatus.getId()))
+        mockMvc.perform(get("/api/import/" + importStatus.getId() + "/importstatus" ))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.filename").value("test.csv"))
                 .andExpect(jsonPath("$.status").value(StatusFile.COMPLETED.toString()));

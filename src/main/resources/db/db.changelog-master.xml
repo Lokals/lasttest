@@ -11,5 +11,6 @@
     <include file="changelog/003-insert-data.xml" relativeToChangelogFile="true"/>
     <include file="changelog/004-create-employee-position.xml" relativeToChangelogFile="true"/>
     <include file="changelog/005-import-status.xml" relativeToChangelogFile="true"/>
+    <include file="changelog/006-import-lock.xml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

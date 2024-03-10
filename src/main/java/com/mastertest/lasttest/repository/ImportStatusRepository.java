@@ -1,8 +1,8 @@
 package com.mastertest.lasttest.repository;
 
 
-import com.mastertest.lasttest.model.factory.ImportStatus;
-import com.mastertest.lasttest.model.factory.StatusFile;
+import com.mastertest.lasttest.model.importfile.ImportStatus;
+import com.mastertest.lasttest.model.importfile.StatusFile;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

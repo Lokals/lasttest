@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <databaseChangeLog
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -16,7 +15,12 @@
             <column name="email" value="jan.kowalski@example.com"/>
             <column name="version" valueNumeric="0"/>
             <column name="type" value="student"/>
+            <column name="university_name" value="Uniwersytet Warszawski"/>
+            <column name="year_of_study" valueNumeric="2"/>
+            <column name="study_field" value="Informatyka"/>
+            <column name="scholarship" valueNumeric="1500"/>
         </insert>
+
         <insert tableName="person">
             <column name="pesel" value="12345678902"/>
             <column name="first_name" value="Ewa"/>
@@ -26,8 +30,12 @@
             <column name="email" value="ewa.malinowska@example.com"/>
             <column name="version" valueNumeric="0"/>
             <column name="type" value="student"/>
-
+            <column name="university_name" value="Uniwersytet Jagielloński"/>
+            <column name="year_of_study" valueNumeric="1"/>
+            <column name="study_field" value="Biologia"/>
+            <column name="scholarship" valueNumeric="1400"/>
         </insert>
+
         <insert tableName="person">
             <column name="pesel" value="12345678903"/>
             <column name="first_name" value="Piotr"/>
@@ -37,6 +45,10 @@
             <column name="email" value="piotr.zajac@example.com"/>
             <column name="version" valueNumeric="0"/>
             <column name="type" value="student"/>
+            <column name="university_name" value="Politechnika Warszawska"/>
+            <column name="year_of_study" valueNumeric="3"/>
+            <column name="study_field" value="Elektrotechnika"/>
+            <column name="scholarship" valueNumeric="1600"/>
         </insert>
 
         <insert tableName="person">
@@ -48,7 +60,11 @@
             <column name="email" value="marta.wojciechowska@example.com"/>
             <column name="version" valueNumeric="0"/>
             <column name="type" value="employee"/>
+            <column name="employment_date" valueDate="2020-01-15"/>
+            <column name="position" value="Programista"/>
+            <column name="salary" valueNumeric="5000"/>
         </insert>
+
         <insert tableName="person">
             <column name="pesel" value="12345678905"/>
             <column name="first_name" value="Tomasz"/>
@@ -58,7 +74,11 @@
             <column name="email" value="tomasz.szewczyk@example.com"/>
             <column name="version" valueNumeric="0"/>
             <column name="type" value="employee"/>
+            <column name="employment_date" valueDate="2019-05-20"/>
+            <column name="position" value="Analityk Systemowy"/>
+            <column name="salary" valueNumeric="4800"/>
         </insert>
+
         <insert tableName="person">
             <column name="pesel" value="12345678906"/>
             <column name="first_name" value="Katarzyna"/>
@@ -68,6 +88,9 @@
             <column name="email" value="katarzyna.baran@example.com"/>
             <column name="version" valueNumeric="0"/>
             <column name="type" value="employee"/>
+            <column name="employment_date" valueDate="2021-02-01"/>
+            <column name="position" value="Kierownik Projektu"/>
+            <column name="salary" valueNumeric="5500"/>
         </insert>
 
         <insert tableName="person">
@@ -79,8 +102,10 @@
             <column name="email" value="stefan.nowakowski@example.com"/>
             <column name="version" valueNumeric="0"/>
             <column name="type" value="retiree"/>
-
+            <column name="pension_amount" valueNumeric="2000"/>
+            <column name="years_worked" valueNumeric="35"/>
         </insert>
+
         <insert tableName="person">
             <column name="pesel" value="12345678908"/>
             <column name="first_name" value="Agata"/>
@@ -90,8 +115,10 @@
             <column name="email" value="agata.majewska@example.com"/>
             <column name="version" valueNumeric="0"/>
             <column name="type" value="retiree"/>
-
+            <column name="pension_amount" valueNumeric="2200"/>
+            <column name="years_worked" valueNumeric="40"/>
         </insert>
+
         <insert tableName="person">
             <column name="pesel" value="12345678909"/>
             <column name="first_name" value="Krzysztof"/>
@@ -101,71 +128,8 @@
             <column name="email" value="krzysztof.pawlowski@example.com"/>
             <column name="version" valueNumeric="0"/>
             <column name="type" value="retiree"/>
-
-        </insert>
-    </changeSet>
-
-    <changeSet id="insert-dummy-students" author="mk">
-        <insert tableName="student">
-            <column name="pesel" value="12345678901"/>
-            <column name="university_name" value="Uniwersytet Warszawski"/>
-            <column name="year_of_study" valueNumeric="2"/>
-            <column name="study_field" value="Informatyka"/>
-            <column name="scholarship" valueNumeric="1500"/>
-        </insert>
-        <insert tableName="student">
-            <column name="pesel" value="12345678902"/>
-            <column name="university_name" value="Uniwersytet Jagielloński"/>
-            <column name="year_of_study" valueNumeric="1"/>
-            <column name="study_field" value="Biologia"/>
-            <column name="scholarship" valueNumeric="1400"/>
-        </insert>
-        <insert tableName="student">
-            <column name="pesel" value="12345678903"/>
-            <column name="university_name" value="Politechnika Warszawska"/>
-            <column name="year_of_study" valueNumeric="3"/>
-            <column name="study_field" value="Elektrotechnika"/>
-            <column name="scholarship" valueNumeric="1600"/>
-        </insert>
-    </changeSet>
-
-    <changeSet id="insert-dummy-employees" author="mk">
-        <insert tableName="employee">
-            <column name="pesel" value="12345678904"/>
-            <column name="employment_date" valueDate="2020-01-15"/>
-            <column name="position" value="Programista"/>
-            <column name="salary" valueNumeric="5000"/>
-        </insert>
-        <insert tableName="employee">
-            <column name="pesel" value="12345678905"/>
-            <column name="employment_date" valueDate="2019-05-20"/>
-            <column name="position" value="Analityk Systemowy"/>
-            <column name="salary" valueNumeric="4800"/>
-        </insert>
-        <insert tableName="employee">
-            <column name="pesel" value="12345678906"/>
-            <column name="employment_date" valueDate="2021-02-01"/>
-            <column name="position" value="Kierownik Projektu"/>
-            <column name="salary" valueNumeric="5500"/>
-        </insert>
-    </changeSet>
-
-    <changeSet id="insert-dummy-retirees" author="mk">
-        <insert tableName="retiree">
-            <column name="pesel" value="12345678907"/>
-            <column name="pension_amount" valueNumeric="2000"/>
-            <column name="years_worked" valueNumeric="35"/>
-        </insert>
-        <insert tableName="retiree">
-            <column name="pesel" value="12345678908"/>
-            <column name="pension_amount" valueNumeric="2200"/>
-            <column name="years_worked" valueNumeric="40"/>
-        </insert>
-        <insert tableName="retiree">
-            <column name="pesel" value="12345678909"/>
             <column name="pension_amount" valueNumeric="2100"/>
             <column name="years_worked" valueNumeric="30"/>
         </insert>
     </changeSet>
-
 </databaseChangeLog>

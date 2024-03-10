@@ -1,7 +1,7 @@
 package com.mastertest.lasttest.model.dto;
 
 
-import com.mastertest.lasttest.model.EmployeePosition;
+import com.mastertest.lasttest.model.position.EmployeePosition;
 import lombok.Builder;
 import lombok.Data;
 

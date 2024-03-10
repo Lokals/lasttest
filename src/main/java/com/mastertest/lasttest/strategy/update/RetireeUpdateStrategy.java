@@ -2,68 +2,59 @@ package com.mastertest.lasttest.strategy.update;
 
 
 import com.mastertest.lasttest.configuration.ConversionUtils;
-import com.mastertest.lasttest.model.Person;
-import com.mastertest.lasttest.model.Retiree;
-import com.mastertest.lasttest.model.dto.PersonDto;
+import com.mastertest.lasttest.model.persons.Retiree;
 import com.mastertest.lasttest.model.dto.RetireeDto;
 import com.mastertest.lasttest.model.dto.command.UpdatePersonCommand;
 import com.mastertest.lasttest.model.dto.command.UpdateRetireeCommand;
-import com.mastertest.lasttest.repository.PersonRepository;
+import com.mastertest.lasttest.repository.RetireeRepository;
 import com.mastertest.lasttest.service.person.UpdateStrategy;
 import com.mastertest.lasttest.validator.PersonValidator;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
+import java.text.MessageFormat;
 
 @RequiredArgsConstructor
 @Component
-public class RetireeUpdateStrategy implements UpdateStrategy<UpdateRetireeCommand> {
+public class RetireeUpdateStrategy implements UpdateStrategy<RetireeDto, UpdateRetireeCommand> {
 
-    private final PersonRepository personRepository;
+    private final RetireeRepository retireeRepository;
     private final PersonValidator personValidator;
 
     @Override
-    public PersonDto updateAndValidate(Map<String, Object> updateCommand, Person person) {
+    public RetireeDto updateAndValidate(UpdatePersonCommand<UpdateRetireeCommand> updatePersonCommand, String pesel) throws Exception {
+        UpdateRetireeCommand retireeCommand = ConversionUtils.convertCommandToCommand(updatePersonCommand.getDetails(), UpdateRetireeCommand.class);
 
-        Retiree retiree = (Retiree) person;
-        UpdateRetireeCommand retireeCommand = ConversionUtils.convertMapToCommand(updateCommand, UpdateRetireeCommand.class);
+        Retiree retiree = retireeRepository.findById(pesel).orElseThrow(() -> new EntityNotFoundException(
+                MessageFormat.format("person with pesel={0} not found", pesel)));
 
-        updateCommonFields(retireeCommand, retiree);
+        if (updatePersonCommand.getFirstName() != null) {
+            retiree.setFirstName(updatePersonCommand.getFirstName());
+        }
+        if (updatePersonCommand.getLastName() != null) {
+            retiree.setLastName(updatePersonCommand.getLastName());
+        }
+        if (updatePersonCommand.getHeight() != null) {
+            retiree.setHeight(updatePersonCommand.getHeight());
+        }
+        if (updatePersonCommand.getWeight() != null) {
+            retiree.setWeight(updatePersonCommand.getWeight());
+        }
+        if (updatePersonCommand.getEmail() != null) {
+            retiree.setEmail(updatePersonCommand.getEmail());
+        }
+        if (retireeCommand != null) {
+            if (retireeCommand.getPensionAmount() != null) {
+                retiree.setPensionAmount(retireeCommand.getPensionAmount());
+            }
+            if (retireeCommand.getYearsWorked() != null) {
+                retiree.setYearsWorked(retireeCommand.getYearsWorked());
+            }
+        }
 
-        if (retireeCommand.getYearsWorked() != null) {
-            retiree.setYearsWorked (retireeCommand.getYearsWorked());
-        }
-        if (retireeCommand.getPensionAmount() != null) {
-            retiree.setPensionAmount(retireeCommand.getPensionAmount());
-        }
+        retireeRepository.save(retiree);
+        return RetireeDto.fromEntity(retiree);
 
-        return convertToPersonDto(retiree);
-    }
-
-
-    private void updateCommonFields(UpdatePersonCommand updateCommand, Retiree retiree) {
-        if (updateCommand.getFirstName() != null){
-            retiree.setFirstName(updateCommand.getFirstName());
-        }
-        if (updateCommand.getLastName() != null){
-            retiree.setLastName(updateCommand.getLastName());
-        }
-        if (updateCommand.getHeight() != null){
-            retiree.setHeight(updateCommand.getHeight());
-        }
-        if (updateCommand.getWeight() != null){
-            retiree.setWeight(updateCommand.getWeight());
-        }
-        if (updateCommand.getEmail() != null){
-            retiree.setEmail(updateCommand.getEmail());
-        }
-    }
-
-    private PersonDto convertToPersonDto(Retiree retiree) {
-        RetireeDto retireeDto = RetireeDto.fromEntity(retiree);
-        personValidator.validate(retireeDto);
-        personRepository.save(retiree);
-        return retireeDto;
     }
 }

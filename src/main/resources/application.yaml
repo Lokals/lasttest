@@ -5,10 +5,13 @@ spring:
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
-        format_sql: false
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        ddl-auto: update
+
   liquibase:
     change-log: classpath:db/db.changelog-master.xml
     enabled: true
@@ -18,9 +21,14 @@ spring:
       max-file-size: 10000MB
       max-request-size: 10000MB
 
+logging:
+  level:
+    root: INFO
+#    com.zaxxer.hikari: ERROR
+
 server:
   port: 8080
 
 person-management:
   default-page-size: 10
-  batch-size: 1000
+  batch-size: 5000

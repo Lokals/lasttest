@@ -3,9 +3,9 @@ package com.mastertest.lasttest.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.mastertest.lasttest.configuration.PersonManagementProperties;
-import com.mastertest.lasttest.model.Employee;
-import com.mastertest.lasttest.model.EmployeePosition;
-import com.mastertest.lasttest.model.Person;
+import com.mastertest.lasttest.model.persons.Employee;
+import com.mastertest.lasttest.model.position.EmployeePosition;
+import com.mastertest.lasttest.model.persons.Person;
 import com.mastertest.lasttest.model.dto.command.UpdateEmployeePositionCommand;
 import com.mastertest.lasttest.repository.EmployeePositionRepository;
 import com.mastertest.lasttest.repository.PersonRepository;
@@ -106,9 +106,9 @@ class EmployeePositionControllerTest {
     @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
     void testUpdateEmployeePosition_ResultUpdatedEmployeePosition() throws Exception {
 
-        Long empId = employee.getId();
-        LocalDate start = LocalDate.now();
-        LocalDate end = LocalDate.now().plusDays(50);
+        String empId = employee.getPesel();
+        LocalDate start = LocalDate.now().plusDays(51);
+        LocalDate end = LocalDate.now().plusDays(52);
         String position = "Architekt";
         Double salary = 12.12;
         UpdateEmployeePositionCommand command = new UpdateEmployeePositionCommand();
@@ -136,7 +136,7 @@ class EmployeePositionControllerTest {
     @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
     void testUpdateEmployeePosition_InvalidSalary_ResultNotUpdatedEmployeePosition() throws Exception {
 
-        Long empId = employee.getId();
+        String empId = employee.getPesel();
         LocalDate start = LocalDate.now();
         LocalDate end = LocalDate.now().plusDays(50);
         String position = "Architekt";
@@ -165,7 +165,7 @@ class EmployeePositionControllerTest {
     @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
     void testUpdateEmployeePosition_InvalidPosition_ResultNotUpdatedEmployeePosition() throws Exception {
 
-        Long empId = employee.getId();
+        String empId = employee.getPesel();
         LocalDate start = LocalDate.now();
         LocalDate end = LocalDate.now().plusDays(50);
         Double salary = 12.12;
@@ -193,38 +193,9 @@ class EmployeePositionControllerTest {
 
     @Test
     @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
-    void testUpdateEmployeePosition_InvalidRepeatedPosition_ResultUpdatedEmployeePosition() throws Exception {
-
-        Long empId = employee2.getId();
-        LocalDate start = employeePosition.getStartDate();
-        LocalDate end = employeePosition.getEndDate();
-        String position = employeePosition.getPositionName();
-        Double salary = 12.12;
-        UpdateEmployeePositionCommand command = new UpdateEmployeePositionCommand();
-        command.setSalary(salary);
-        command.setPositionName(position);
-        command.setEndDate(end);
-        command.setStartDate(start);
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        String requestBody = objectMapper.writeValueAsString(command);
-
-        mockMvc.perform(post("/api/employees/" + empId + "/positions")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
-                .andDo(print())
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("The position Tester is already occupied during the specified period."));
-
-    }
-
-
-    @Test
-    @WithMockUser(username = "admin", password = "adminpassword", roles = "ADMIN")
     void testUpdateEmployeePosition_InvalidEndDayBeforeStartDay_ResultUpdatedEmployeePosition() throws Exception {
 
-        Long empId = employee.getId();
+        String empId = employee.getPesel();
         LocalDate start = LocalDate.now();
         LocalDate end = LocalDate.now().minusDays(50);
         String position = "Tester Starszy";

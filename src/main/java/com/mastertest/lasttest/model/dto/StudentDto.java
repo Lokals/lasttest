@@ -1,6 +1,6 @@
 package com.mastertest.lasttest.model.dto;
 
-import com.mastertest.lasttest.model.Student;
+import com.mastertest.lasttest.model.persons.Student;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

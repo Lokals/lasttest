@@ -1,4 +1,4 @@
-package com.mastertest.lasttest.model;
+package com.mastertest.lasttest.model.persons;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -10,9 +10,10 @@ import org.hibernate.annotations.DynamicUpdate;
 
 @Getter
 @Setter
-@Inheritance(strategy = InheritanceType.JOINED)
 @Entity
 @DynamicUpdate
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.STRING)
 public abstract class Person {
 
 
@@ -35,12 +36,11 @@ public abstract class Person {
     @Positive(message = "Weight must be positive")
     private Double weight;
 
+    @NotNull(message = "Email cannot be null")
     @Email(message = "Invalid email format")
     private String email;
 
-    @NotBlank(message = "Type cannot be blank")
+    @Column(insertable = false, updatable = false)
     private String type;
-
-
 
 }

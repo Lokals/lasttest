@@ -1,7 +1,7 @@
 package com.mastertest.lasttest.service.employee;
 
-import com.mastertest.lasttest.model.Employee;
-import com.mastertest.lasttest.model.EmployeePosition;
+import com.mastertest.lasttest.model.persons.Employee;
+import com.mastertest.lasttest.model.position.EmployeePosition;
 import com.mastertest.lasttest.model.dto.EmployeePositionDto;
 import com.mastertest.lasttest.model.dto.command.UpdateEmployeePositionCommand;
 import com.mastertest.lasttest.repository.EmployeePositionRepository;
@@ -43,7 +43,7 @@ class EmployeePositionServiceImplTest {
     @BeforeEach
     void setUp() {
         employee = new Employee();
-        employee.setId(1L);
+        employee.setPesel("99999999991");
         employee.setFirstName("Test");
         employee.setLastName("Test");
         command = new UpdateEmployeePositionCommand();
@@ -55,10 +55,10 @@ class EmployeePositionServiceImplTest {
 
     @Test
     void testUpdatePositionToEmployee_WithValidData_UpdatesPosition() {
-        when(employeeRepository.findById(anyLong())).thenReturn(Optional.of(employee));
+        when(employeeRepository.findById(anyString())).thenReturn(Optional.of(employee));
         when(employeePositionRepository.findByPositionName(anyString())).thenReturn(Collections.emptyList());
 
-        EmployeePositionDto result = employeePositionService.updatePositionToEmployee(1L, command);
+        EmployeePositionDto result = employeePositionService.updatePositionToEmployee("99999999991", command);
 
         assertNotNull(result);
         assertEquals("Tester", result.getPositionName());
@@ -70,7 +70,7 @@ class EmployeePositionServiceImplTest {
     @Test
     void testUpdatePositionToEmployee_PositionAlreadyOccupied_ThrowsIllegalArgumentException() {
         Employee otherEmployee = new Employee();
-        otherEmployee.setId(2L);
+        otherEmployee.setPesel("99999999992");
         EmployeePosition existingPosition = new EmployeePosition();
         existingPosition.setId(2L);
         existingPosition.setEmployee(otherEmployee);
@@ -78,26 +78,26 @@ class EmployeePositionServiceImplTest {
         existingPosition.setStartDate(LocalDate.now());
         existingPosition.setEndDate(LocalDate.now().plusDays(10));
 
-        when(employeeRepository.findById(anyLong())).thenReturn(Optional.of(employee));
+        when(employeeRepository.findById(anyString())).thenReturn(Optional.of(employee));
         when(employeePositionRepository.findByPositionName(anyString())).thenReturn(Collections.singletonList(existingPosition));
 
-        assertThrows(IllegalArgumentException.class, () -> employeePositionService.updatePositionToEmployee(1L, command));
+        assertThrows(IllegalArgumentException.class, () -> employeePositionService.updatePositionToEmployee("99999999992", command));
     }
 
     @Test
     void testUpdatePositionToEmployee_InvalidDateRange_ThrowsIllegalArgumentException() {
         command.setEndDate(command.getStartDate().minusDays(1));
 
-        when(employeeRepository.findById(anyLong())).thenReturn(Optional.of(employee));
+        when(employeeRepository.findById(anyString())).thenReturn(Optional.of(employee));
 
-        assertThrows(IllegalArgumentException.class, () -> employeePositionService.updatePositionToEmployee(1L, command));
+        assertThrows(IllegalArgumentException.class, () -> employeePositionService.updatePositionToEmployee("99999999991", command));
     }
 
     @Test
     void testUpdatePositionToEmployee_EmployeeNotFound_ThrowsEntityNotFoundException() {
-        when(employeeRepository.findById(anyLong())).thenReturn(Optional.empty());
+        when(employeeRepository.findById(anyString())).thenReturn(Optional.empty());
 
-        assertThrows(EntityNotFoundException.class, () -> employeePositionService.updatePositionToEmployee(1L, command));
+        assertThrows(EntityNotFoundException.class, () -> employeePositionService.updatePositionToEmployee("99999999993", command));
     }
 
 

@@ -1,5 +1,6 @@
 package com.mastertest.lasttest.model.dto.command;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
@@ -13,7 +14,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UpdatePersonCommand {
+public class UpdatePersonCommand<T> {
 
     @Pattern(regexp = "[A-Z][a-z]{1,19}", message = "PATTERN_MISMATCH_{regexp}")
     protected String firstName;
@@ -28,5 +29,8 @@ public class UpdatePersonCommand {
     protected Double weight;
     @Email
     protected String email;
+
+    @Valid
+    private T details;
 
 }

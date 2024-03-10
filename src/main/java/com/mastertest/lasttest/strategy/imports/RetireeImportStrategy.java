@@ -1,33 +1,25 @@
 package com.mastertest.lasttest.strategy.imports;
 
 import com.mastertest.lasttest.configuration.ConversionUtils;
-import com.mastertest.lasttest.configuration.PersonManagementProperties;
-import com.mastertest.lasttest.model.Person;
-import com.mastertest.lasttest.model.Retiree;
 import com.mastertest.lasttest.model.dto.PersonDto;
 import com.mastertest.lasttest.model.dto.RetireeDto;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
-import com.mastertest.lasttest.model.factory.ImportStatus;
+import com.mastertest.lasttest.model.importfile.ImportStatus;
+import com.mastertest.lasttest.model.persons.Person;
+import com.mastertest.lasttest.model.persons.Retiree;
 import com.mastertest.lasttest.repository.PersonRepository;
-import com.mastertest.lasttest.service.fileprocess.ImportStatusService;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
-import com.mastertest.lasttest.service.person.PersonRetireeService;
 import com.mastertest.lasttest.validator.PersonValidator;
 import jakarta.persistence.EntityExistsException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.text.ParseException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.*;
 
 @RequiredArgsConstructor
 @Component
@@ -36,36 +28,27 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
 
     private final PersonValidator validator;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
-    private final JdbcTemplate jdbcTemplate;
     private final PersonRepository personRepository;
-    private final ImportStatusService importStatusService;
-    private final PersonRetireeService personRetireeService;
     private static final Logger logger = LoggerFactory.getLogger(RetireeImportStrategy.class);
-    private final PersonManagementProperties properties;
-    private final CopyOnWriteArrayList<Map<String, Object>> personBatch = new CopyOnWriteArrayList<>();
-    private final CopyOnWriteArraySet<Retiree> personRepoBatch = new CopyOnWriteArraySet<>();
-    private final CopyOnWriteArrayList<Map<String, Object>> retireeBatch = new CopyOnWriteArrayList<>();
+    List<Map<String, Object>> personBatch = new ArrayList<>();
+    String PERSON_SQL = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version, pension_amount, years_worked) " +
+            "VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version, :pension_amount, :years_worked) " +
+            "ON DUPLICATE KEY UPDATE " +
+            "first_name = VALUES(first_name), " +
+            "last_name = VALUES(last_name), " +
+            "height = VALUES(height), " +
+            "weight = VALUES(weight), " +
+            "email = VALUES(email), " +
+            "type = VALUES(type), " +
+            "version = version + 1, " +
+            "pension_amount = VALUES(pension_amount), " +
+            "years_worked = VALUES(years_worked);";
 
-    String RETIREE_SQL = "INSERT INTO retiree (pesel, pension_amount, years_worked) VALUES (:pesel, :pension_amount, :years_worked)";
-    String PERSON_SQL = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
-
-    @Override
-    public Long getBatchSize() {
-        return (long) personRepoBatch.size();
-    }
 
     @Override
     public void clearBatch() {
         personBatch.clear();
-        personRepoBatch.clear();
-        retireeBatch.clear();
 
-    }
-
-    @Override
-    public void validateParseAndSave(String record) throws ParseException {
-        Retiree retiree = parseCsvToDto(record);
-        validate(retiree);
     }
 
     @Override
@@ -80,28 +63,25 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
     public void addToBatch(String record, ImportStatus importStatus) throws ParseException {
         Retiree retiree = parseCsvToDto(record);
         validate(retiree);
-        personRepoBatch.add(retiree);
+        processPersonToBatch(retiree);
 
     }
 
-
     @Override
     public void processBatch() {
-        logger.debug("Processing Employee batch with size: {} on thread: {}", personRepoBatch.size(), Thread.currentThread().getName());
-        personRetireeService.savePersonsAndERetiree(personRepoBatch);
+        processBatchInternal();
         clearBatch();
     }
 
     private void processBatchInternal() {
-        logger.debug("Processing Employee batch with size: {} on thread: {}", personBatch.size(), Thread.currentThread().getName());
+        logger.info("Processing Employee batch with size: {} on thread: {}", personBatch.size(), Thread.currentThread().getName());
         namedParameterJdbcTemplate.batchUpdate(PERSON_SQL, personBatch.toArray(new Map[0]));
-        namedParameterJdbcTemplate.batchUpdate(RETIREE_SQL, retireeBatch.toArray(new Map[0]));
     }
+
 
     private void processPersonToBatch(Retiree retiree) {
         if (retiree != null) {
             Map<String, Object> personParams = new HashMap<>();
-            Map<String, Object> retireeParams = new HashMap<>();
             personParams.put("pesel", retiree.getPesel());
             personParams.put("first_name", retiree.getFirstName());
             personParams.put("last_name", retiree.getLastName());
@@ -110,10 +90,8 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
             personParams.put("email", retiree.getEmail());
             personParams.put("type", "retiree");
             personParams.put("version", 0L);
-            retireeParams.put("pesel", retiree.getPesel());
-            retireeParams.put("pension_amount", retiree.getPensionAmount());
-            retireeParams.put("years_worked", retiree.getYearsWorked());
-            retireeBatch.add(retireeParams);
+            personParams.put("pension_amount", retiree.getPensionAmount());
+            personParams.put("years_worked", retiree.getYearsWorked());
             personBatch.add(personParams);
         }
     }
@@ -134,19 +112,13 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
         retiree.setHeight(Double.parseDouble(fields[4]));
         retiree.setWeight(Double.parseDouble(fields[5]));
         retiree.setEmail(fields[6]);
-        retiree.setType("retiree");
         retiree.setPensionAmount(Double.parseDouble(fields[7]));
         retiree.setYearsWorked(Integer.parseInt(fields[8]));
         return retiree;
     }
 
-    private void validate(Retiree retireeDto) {
-        Optional<Person> personExisting = personRepository.findByPesel(retireeDto.getPesel());
-        if (personExisting.isPresent()) {
-            logger.error("Person with pesel: {} exists", retireeDto.getPesel());
-            throw new EntityExistsException(MessageFormat.format("Person with pesel: {} exists", retireeDto.getPesel()));
-        }
-        validator.validate(retireeDto);
+    private void validate(Retiree retiree) {
+        validator.validate(retiree);
     }
 
 
@@ -172,12 +144,9 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
         parameters.put("pension_amount", retireeDto.getPensionAmount());
         parameters.put("version", 0L);
 
-        String insertPersonSql = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version) VALUES (:pesel, :first_name, :last_name, :height, :weight, :email, :type, :version)";
-        namedParameterJdbcTemplate.update(insertPersonSql, parameters);
+        namedParameterJdbcTemplate.update(PERSON_SQL, parameters);
 
-        String insertRetireeSql = "INSERT INTO retiree (pesel, years_worked, pension_amount) VALUES (:pesel, :years_worked, :pension_amount)";
 
-        namedParameterJdbcTemplate.update(insertRetireeSql, parameters);
         return retireeDto;
     }
 }

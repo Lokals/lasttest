@@ -1,72 +1,63 @@
 package com.mastertest.lasttest.strategy.update;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mastertest.lasttest.configuration.ConversionUtils;
-import com.mastertest.lasttest.model.Employee;
-import com.mastertest.lasttest.model.Person;
+import com.mastertest.lasttest.model.persons.Employee;
 import com.mastertest.lasttest.model.dto.EmployeeDto;
-import com.mastertest.lasttest.model.dto.PersonDto;
 import com.mastertest.lasttest.model.dto.command.UpdateEmployeeCommand;
 import com.mastertest.lasttest.model.dto.command.UpdatePersonCommand;
-import com.mastertest.lasttest.repository.PersonRepository;
+import com.mastertest.lasttest.repository.EmployeeRepository;
 import com.mastertest.lasttest.service.person.UpdateStrategy;
 import com.mastertest.lasttest.validator.PersonValidator;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.text.ParseException;
-import java.util.Map;
+import java.text.MessageFormat;
 
 @RequiredArgsConstructor
 @Component
-public class EmployeeUpdateStrategy implements UpdateStrategy<UpdateEmployeeCommand> {
+public class EmployeeUpdateStrategy implements UpdateStrategy<EmployeeDto, UpdateEmployeeCommand> {
 
-    private final PersonRepository personRepository;
-    private final PersonValidator personValidator;
+    private final EmployeeRepository employeeRepository;
+    private final PersonValidator validator;
+
 
     @Override
-    public PersonDto updateAndValidate(Map<String, Object> updateCommand, Person person) throws JsonProcessingException, ParseException {
+    public EmployeeDto updateAndValidate(UpdatePersonCommand<UpdateEmployeeCommand> updatePersonCommand, String pesel) throws Exception {
+        UpdateEmployeeCommand employeeCommand = ConversionUtils.convertCommandToCommand(updatePersonCommand.getDetails(), UpdateEmployeeCommand.class);
 
-        Employee employee = (Employee) person;
-        UpdateEmployeeCommand employeeCommand = ConversionUtils.convertMapToCommand(updateCommand, UpdateEmployeeCommand.class);
-        updateCommonFields(employeeCommand, employee);
+        Employee employee = employeeRepository.findById(pesel).orElseThrow(() -> new EntityNotFoundException(
+                MessageFormat.format("person with pesel={0} not found", pesel)));
 
-        if (employeeCommand.getEmploymentDate() != null) {
-            employee.setEmploymentDate(employeeCommand.getEmploymentDate());
+        if (updatePersonCommand.getFirstName() != null) {
+            employee.setFirstName(updatePersonCommand.getFirstName());
         }
-        if (employeeCommand.getSalary() != null) {
-            employee.setSalary(employeeCommand.getSalary());
+        if (updatePersonCommand.getLastName() != null) {
+            employee.setLastName(updatePersonCommand.getLastName());
         }
-        if (employeeCommand.getPosition() != null) {
-            employee.setPosition(employeeCommand.getPosition());
+        if (updatePersonCommand.getHeight() != null) {
+            employee.setHeight(updatePersonCommand.getHeight());
         }
+        if (updatePersonCommand.getWeight() != null) {
+            employee.setWeight(updatePersonCommand.getWeight());
+        }
+        if (updatePersonCommand.getEmail() != null) {
+            employee.setEmail(updatePersonCommand.getEmail());
+        }
+        if (employeeCommand != null) {
+            validator.validate(employeeCommand);
+            if (employeeCommand.getPosition() != null) {
+                employee.setPosition(employeeCommand.getPosition());
+            }
+            if (employeeCommand.getSalary() != null) {
+                employee.setSalary(employeeCommand.getSalary());
+            }
+            if (employeeCommand.getEmploymentDate() != null) {
+                employee.setEmploymentDate(employeeCommand.getEmploymentDate());
+            }
+        }
+        employeeRepository.save(employee);
+        return EmployeeDto.fromEntity(employee);
 
-        return convertToPersonDto(employee);
-
-    }
-
-    private void updateCommonFields(UpdatePersonCommand updateCommand, Employee employee) {
-        if (updateCommand.getFirstName() != null) {
-            employee.setFirstName(updateCommand.getFirstName());
-        }
-        if (updateCommand.getLastName() != null) {
-            employee.setLastName(updateCommand.getLastName());
-        }
-        if (updateCommand.getHeight() != null) {
-            employee.setHeight(updateCommand.getHeight());
-        }
-        if (updateCommand.getWeight() != null) {
-            employee.setWeight(updateCommand.getWeight());
-        }
-        if (updateCommand.getEmail() != null) {
-            employee.setEmail(updateCommand.getEmail());
-        }
-    }
-
-    private PersonDto convertToPersonDto(Employee employee) {
-        EmployeeDto employeeDto = EmployeeDto.fromEntity(employee);
-        personValidator.validate(employeeDto);
-        personRepository.save(employee);
-        return employeeDto;
     }
 }

@@ -1,7 +1,7 @@
 package com.mastertest.lasttest.service.employee;
 
-import com.mastertest.lasttest.model.Employee;
-import com.mastertest.lasttest.model.EmployeePosition;
+import com.mastertest.lasttest.model.persons.Employee;
+import com.mastertest.lasttest.model.position.EmployeePosition;
 import com.mastertest.lasttest.model.dto.EmployeePositionDto;
 import com.mastertest.lasttest.model.dto.command.UpdateEmployeePositionCommand;
 import com.mastertest.lasttest.repository.EmployeePositionRepository;

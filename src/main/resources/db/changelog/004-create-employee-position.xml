@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <databaseChangeLog
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -19,10 +18,10 @@
             <column name="end_date" type="date"/>
             <column name="salary" type="double"/>
         </createTable>
-        <addForeignKeyConstraint constraintName="fk_employee_position_employee"
+        <addForeignKeyConstraint constraintName="fk_employee_position_person"
                                  baseTableName="employee_position"
                                  baseColumnNames="employee_pesel"
-                                 referencedTableName="employee"
+                                 referencedTableName="person"
                                  referencedColumnNames="pesel"/>
     </changeSet>
 </databaseChangeLog>

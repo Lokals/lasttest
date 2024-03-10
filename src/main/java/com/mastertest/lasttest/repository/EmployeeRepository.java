@@ -1,7 +1,7 @@
 package com.mastertest.lasttest.repository;
 
 
-import com.mastertest.lasttest.model.Employee;
+import com.mastertest.lasttest.model.persons.Employee;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

@@ -1,6 +1,6 @@
 package com.mastertest.lasttest.service.person;
 
-import com.mastertest.lasttest.model.Retiree;
+import com.mastertest.lasttest.model.persons.Retiree;
 import com.mastertest.lasttest.repository.PersonRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

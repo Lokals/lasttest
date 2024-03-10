@@ -1,7 +1,7 @@
 package com.mastertest.lasttest.model.dto;
 
 
-import com.mastertest.lasttest.model.Employee;
+import com.mastertest.lasttest.model.persons.Employee;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;

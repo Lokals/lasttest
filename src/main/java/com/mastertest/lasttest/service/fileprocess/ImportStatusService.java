@@ -1,7 +1,7 @@
 package com.mastertest.lasttest.service.fileprocess;
 
-import com.mastertest.lasttest.model.factory.ImportStatus;
-import com.mastertest.lasttest.model.factory.StatusFile;
+import com.mastertest.lasttest.model.importfile.ImportStatus;
+import com.mastertest.lasttest.model.importfile.StatusFile;
 import com.mastertest.lasttest.repository.ImportStatusRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;

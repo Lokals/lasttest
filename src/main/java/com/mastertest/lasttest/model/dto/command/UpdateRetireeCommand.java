@@ -4,16 +4,12 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 
 @Data
-@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
-public class UpdateRetireeCommand extends UpdatePersonCommand {
+public class UpdateRetireeCommand  {
 
     @PositiveOrZero(message = "Pension cannot be negative")
     private Double pensionAmount;

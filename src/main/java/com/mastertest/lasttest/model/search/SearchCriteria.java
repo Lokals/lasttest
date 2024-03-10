@@ -1,4 +1,4 @@
-package com.mastertest.lasttest.model;
+package com.mastertest.lasttest.model.search;
 
 
 import lombok.AllArgsConstructor;
@@ -15,6 +15,5 @@ public class SearchCriteria {
     private String operation;
     private Object value;
     private Object additionalValue;
-
 
 }

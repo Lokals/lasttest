@@ -1,5 +1,6 @@
-package com.mastertest.lasttest.model;
+package com.mastertest.lasttest.model.position;
 
+import com.mastertest.lasttest.model.persons.Employee;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

@@ -1,7 +1,7 @@
 package com.mastertest.lasttest.service.person;
 
-import com.mastertest.lasttest.model.Person;
-import com.mastertest.lasttest.model.Student;
+import com.mastertest.lasttest.model.persons.Person;
+import com.mastertest.lasttest.model.persons.Student;
 import com.mastertest.lasttest.repository.PersonRepository;
 import com.mastertest.lasttest.strategy.update.UpdateStrategyManager;
 import jakarta.persistence.EntityNotFoundException;
@@ -35,22 +35,19 @@ class PersonServiceImplTest {
     @Mock
     private UpdateStrategy updateStrategy;
 
-    private static Student person;
+    private static Person person;
 
     private static Map<String, Object> commandMap;
 
     @BeforeEach
     void setUp() {
         person = new Student();
-        person.setId(1L);
         person.setFirstName("Test");
         person.setLastName("Testowy");
         person.setHeight(180.0);
         person.setWeight(50.0);
+        person.setPesel("85040612346");
         person.setEmail("test.testowy@test.com");
-        person.setScholarship(1000.0);
-        person.setYearOfStudy(1);
-        person.setUniversityName("Uniwerek");
         commandMap = Map.of(
                 "firstName", "Cycek",
                 "lastName", "Bicek",
@@ -63,11 +60,14 @@ class PersonServiceImplTest {
                 "studyField", "Malarstwo",
                 "scholarship", 901.0
         );
+        System.out.println(person.getPesel());
+        personRepository.save(person);
     }
 
     @Test
     void testGetPersonById_ExistingId_ReturnsPerson(){
-        Long personId = 1L;
+        String  personId = "85040612346";
+        System.out.println(personRepository.findAll());
         when(personRepository.findById(personId)).thenReturn(Optional.of(person));
         Person result = personService.getPersonById(personId);
 
@@ -78,7 +78,8 @@ class PersonServiceImplTest {
 
     @Test
     void testGetPersonById_NonExistingId_ThrowsEntityNotFoundException() {
-        Long personId = 1L;
+        String  personId = "99999999991";
+
         when(personRepository.findById(personId)).thenReturn(Optional.empty());
 
         assertThrows(EntityNotFoundException.class, () -> personService.getPersonById(personId));

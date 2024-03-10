@@ -2,19 +2,17 @@ package com.mastertest.lasttest.controller;
 
 
 import com.mastertest.lasttest.common.FileProcessingException;
-import com.mastertest.lasttest.model.factory.ImportStatus;
-import com.mastertest.lasttest.model.factory.StatusFile;
+import com.mastertest.lasttest.model.importfile.ImportStatus;
 import com.mastertest.lasttest.repository.ImportStatusRepository;
 import com.mastertest.lasttest.service.fileprocess.CsvImportService;
 import com.mastertest.lasttest.service.fileprocess.ImportStatusService;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 
 @RestController
 @RequestMapping("api/import")
@@ -28,18 +26,17 @@ public class ImportFileController {
 
 
     @PostMapping("/employees")
-    @Transactional
-    public ResponseEntity<ImportStatus> uploadFile(@RequestParam("file") MultipartFile file) throws IOException {
-        synchronized (this) {
-            if (!importStatusRepository.findByStatuses(List.of(StatusFile.INPROGRESS, StatusFile.PENDING)).isEmpty()) {
-                throw new FileProcessingException("Already of some import is during processing");
-            }
-            ImportStatus importStatus = importStatusService.createNewImportStatus(file.getOriginalFilename());
-
-            csvImportService.importCsv(file, importStatus);
+    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file) {
+        try {
+            ImportStatus importStatus = csvImportService.importCsv(file);
             return ResponseEntity.ok(importStatusService.getImportStatus(importStatus.getId()));
+        } catch (FileProcessingException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing file");
         }
     }
+
 
     @GetMapping("{id}/importstatus")
     public ResponseEntity<ImportStatus> getImportStatus(@PathVariable Long id) {

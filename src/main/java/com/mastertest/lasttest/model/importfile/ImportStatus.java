@@ -1,4 +1,4 @@
-package com.mastertest.lasttest.model.factory;
+package com.mastertest.lasttest.model.importfile;
 
 
 import jakarta.persistence.*;

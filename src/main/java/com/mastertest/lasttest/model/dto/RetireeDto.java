@@ -1,6 +1,6 @@
 package com.mastertest.lasttest.model.dto;
 
-import com.mastertest.lasttest.model.Retiree;
+import com.mastertest.lasttest.model.persons.Retiree;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;

@@ -2,14 +2,17 @@ package com.mastertest.lasttest.controller;
 
 import com.mastertest.lasttest.common.UnknownEntityTypeException;
 import com.mastertest.lasttest.configuration.PersonManagementProperties;
-import com.mastertest.lasttest.model.Person;
+import com.mastertest.lasttest.model.persons.Person;
 import com.mastertest.lasttest.model.dto.PersonDto;
 import com.mastertest.lasttest.model.dto.command.CreatePersonCommand;
+import com.mastertest.lasttest.model.dto.command.UpdatePersonCommand;
 import com.mastertest.lasttest.repository.PersonRepository;
 import com.mastertest.lasttest.search.SpecificationGenerator;
 import com.mastertest.lasttest.service.fileprocess.ImportStrategy;
 import com.mastertest.lasttest.service.person.PersonService;
+import com.mastertest.lasttest.service.person.UpdateStrategy;
 import com.mastertest.lasttest.strategy.imports.StrategyManager;
+import com.mastertest.lasttest.strategy.update.UpdateStrategyManager;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +37,7 @@ public class PersonController {
     private final PersonManagementProperties properties;
     private final PersonService personService;
     private final StrategyManager strategyManager;
+    private final UpdateStrategyManager updateStrategyManager;
     private final SpecificationGenerator specificationGenerator;
 
     private static final Logger logger = LoggerFactory.getLogger(PersonController.class);
@@ -64,9 +68,14 @@ public class PersonController {
     }
 
     @PostMapping("/{employeePesel}/update")
-    public ResponseEntity<?> updatePerson(@PathVariable String employeePesel, @Valid @RequestBody Map<String, Object> commandMap) {
+    public ResponseEntity<?> updatePerson(@PathVariable String employeePesel, @Valid @RequestBody UpdatePersonCommand<?> commandMap) {
         try {
-            PersonDto personDto = personService.updatePerson(employeePesel, commandMap);
+            String type = personService.getPersonType(employeePesel);
+            UpdateStrategy updateStrategy = updateStrategyManager.getUpdateStrategy(type);
+            if (updateStrategy == null) {
+                throw new UnknownEntityTypeException("Unknown person type: " + type);
+            }
+            PersonDto personDto = updateStrategy.updateAndValidate(commandMap, employeePesel);
             return ResponseEntity.ok(personDto);
         } catch (OptimisticLockException e) {
             logger.error("Entity edited during processing: {}", e.getMessage());
