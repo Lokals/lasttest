@@ -24,4 +24,6 @@ public class EmployeePosition {
     private LocalDate startDate;
     private LocalDate endDate;
     private Double salary;
+    @Version
+    private Long version;
 }

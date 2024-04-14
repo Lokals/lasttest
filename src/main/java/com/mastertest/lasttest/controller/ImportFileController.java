@@ -3,7 +3,6 @@ package com.mastertest.lasttest.controller;
 
 import com.mastertest.lasttest.common.FileProcessingException;
 import com.mastertest.lasttest.model.importfile.ImportStatus;
-import com.mastertest.lasttest.repository.ImportStatusRepository;
 import com.mastertest.lasttest.service.fileprocess.CsvImportService;
 import com.mastertest.lasttest.service.fileprocess.ImportStatusService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,7 @@ public class ImportFileController {
 
     private final CsvImportService csvImportService;
     private final ImportStatusService importStatusService;
-    private final ImportStatusRepository importStatusRepository;
+
 
 
     @PostMapping("/employees")

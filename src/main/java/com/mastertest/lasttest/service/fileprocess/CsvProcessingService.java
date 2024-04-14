@@ -82,8 +82,5 @@ public class CsvProcessingService {
             return;
         }
         importStatusService.updateImportStatus(importStatus.getId(), StatusFile.COMPLETED, importStatusService.getRowsImportStatus(importStatus.getId()));
-
     }
-
-
 }

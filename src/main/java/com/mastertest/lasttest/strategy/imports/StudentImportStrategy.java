@@ -29,7 +29,7 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
     private final PersonValidator personValidator;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     private final PersonRepository personRepository;
-
+    private final ConversionUtils conversionUtils;
     private static final Logger logger = LoggerFactory.getLogger(StudentImportStrategy.class);
     private final List<Map<String, Object>> personBatch = new ArrayList<>();
 
@@ -58,7 +58,7 @@ public class StudentImportStrategy implements ImportStrategy<StudentDto> {
 
     @Override
     public PersonDto validateAndSave(CreatePersonCommand<?> command) {
-        StudentDto studentDto = ConversionUtils.convertMapToDto((Map) command.getDetails(), StudentDto.class);
+        StudentDto studentDto = conversionUtils.convertMapToDto((Map) command.getDetails(), StudentDto.class);
         validateDto(studentDto);
         return saveStudent(studentDto);
     }

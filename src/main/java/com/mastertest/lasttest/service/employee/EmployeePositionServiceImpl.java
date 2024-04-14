@@ -7,6 +7,8 @@ import com.mastertest.lasttest.model.dto.command.UpdateEmployeePositionCommand;
 import com.mastertest.lasttest.repository.EmployeePositionRepository;
 import com.mastertest.lasttest.repository.EmployeeRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.OptimisticLockException;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,32 +27,39 @@ public class EmployeePositionServiceImpl implements EmployeePositionService {
     private final EmployeeRepository employeeRepository;
 
     @Override
+    @Transactional
     public EmployeePositionDto updatePositionToEmployee(String employeePesel, UpdateEmployeePositionCommand command) {
-        logger.debug("Updating position for employee with pesel: {}", employeePesel);
+        try {
+            logger.debug("Updating position for employee with pesel: {}", employeePesel);
 
-        Employee employee = getEmployeeByPesel(employeePesel);
+            Employee employee = getEmployeeByPesel(employeePesel);
 
-        EmployeePosition employeePosition = new EmployeePosition();
-        employeePosition.setEmployee(employee);
-        employeePosition.setPositionName(command.getPositionName());
-        employeePosition.setStartDate(command.getStartDate());
-        employeePosition.setEndDate(command.getEndDate());
-        employeePosition.setSalary(command.getSalary());
+            EmployeePosition employeePosition = new EmployeePosition();
+            employeePosition.setEmployee(employee);
+            employeePosition.setPositionName(command.getPositionName());
+            employeePosition.setStartDate(command.getStartDate());
+            employeePosition.setEndDate(command.getEndDate());
+            employeePosition.setSalary(command.getSalary());
 
-        validatePositionDates(employeePosition);
-        if (isPositionOccupied(employeePosition)) {
-            throw new IllegalArgumentException("The position " + command.getPositionName() + " is already occupied during the specified period.");
+            validatePositionDates(employeePosition);
+            if (isPositionOccupied(employeePosition)) {
+                throw new IllegalArgumentException("The position " + command.getPositionName() + " is already occupied during the specified period.");
+            }
+            if (isPositionDatesOverlapWithExisting(employee, employeePosition)) {
+                throw new IllegalArgumentException("The position dates overlap with existing positions.");
+            }
+
+            employee.setPosition(command.getPositionName());
+            employee.setSalary(command.getSalary());
+            employeeRepository.save(employee);
+            employeePositionRepository.save(employeePosition);
+            logger.info("Position updated for employee with pesel: {}", employeePesel);
+            return EmployeePositionDto.fromEntity(employeePosition);
+
+        }catch (OptimisticLockException e) {
+            logger.error("Conflict detected when updating the employee position for pesel: {}", employeePesel);
+            throw  new OptimisticLockException(e);
         }
-        if (isPositionDatesOverlapWithExisting(employee, employeePosition)) {
-            throw new IllegalArgumentException("The position dates overlap with existing positions.");
-        }
-
-        employee.setPosition(command.getPositionName());
-        employee.setSalary(command.getSalary());
-        employeeRepository.save(employee);
-        employeePositionRepository.save(employeePosition);
-        logger.info("Position updated for employee with pesel: {}", employeePesel);
-        return EmployeePositionDto.fromEntity(employeePosition);
     }
 
 

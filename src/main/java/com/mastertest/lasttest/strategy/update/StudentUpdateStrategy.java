@@ -20,11 +20,11 @@ public class StudentUpdateStrategy implements UpdateStrategy<StudentDto, UpdateS
 
     private final StudentRepository studentRepository;
     private final PersonValidator validator;
-
+    private final ConversionUtils conversionUtils;
 
     @Override
     public StudentDto updateAndValidate(UpdatePersonCommand<UpdateStudentCommand> updatePersonCommand, String pesel) {
-        UpdateStudentCommand studentCommand = ConversionUtils.convertCommandToCommand(updatePersonCommand.getDetails(), UpdateStudentCommand.class);
+        UpdateStudentCommand studentCommand = conversionUtils.convertCommandToCommand(updatePersonCommand.getDetails(), UpdateStudentCommand.class);
 
         Student student = studentRepository.findById(pesel).orElseThrow(() -> new EntityNotFoundException(
                 MessageFormat.format("person with pesel={0} not found", pesel)));

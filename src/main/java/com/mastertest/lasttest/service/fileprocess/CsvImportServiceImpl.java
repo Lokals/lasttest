@@ -31,7 +31,7 @@ public class CsvImportServiceImpl implements CsvImportService {
     }
 
     @Async("fileProcessingExecutor")
-    private void runProcessingFile(MultipartFile file, ImportStatus status){
+    public void runProcessingFile(MultipartFile file, ImportStatus status){
         csvProcessingService.processFile(file, status);
     }
 

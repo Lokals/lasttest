@@ -29,6 +29,7 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
     private final PersonValidator validator;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     private final PersonRepository personRepository;
+    private final ConversionUtils conversionUtils;
     private static final Logger logger = LoggerFactory.getLogger(RetireeImportStrategy.class);
     List<Map<String, Object>> personBatch = new ArrayList<>();
     String PERSON_SQL = "INSERT INTO person (pesel, first_name, last_name, height, weight, email, type, version, pension_amount, years_worked) " +
@@ -53,7 +54,7 @@ public class RetireeImportStrategy implements ImportStrategy<RetireeDto> {
 
     @Override
     public PersonDto validateAndSave(CreatePersonCommand<?> command) {
-        RetireeDto retireeDto = ConversionUtils.convertMapToDto((Map) command.getDetails(), RetireeDto.class);
+        RetireeDto retireeDto = conversionUtils.convertMapToDto((Map) command.getDetails(), RetireeDto.class);
         validateDto(retireeDto);
         return saveRetiree(retireeDto);
     }

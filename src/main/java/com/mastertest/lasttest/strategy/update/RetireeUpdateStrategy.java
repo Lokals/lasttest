@@ -20,11 +20,12 @@ import java.text.MessageFormat;
 public class RetireeUpdateStrategy implements UpdateStrategy<RetireeDto, UpdateRetireeCommand> {
 
     private final RetireeRepository retireeRepository;
-    private final PersonValidator personValidator;
+    private final PersonValidator validator;
+    private final ConversionUtils conversionUtils;
 
     @Override
     public RetireeDto updateAndValidate(UpdatePersonCommand<UpdateRetireeCommand> updatePersonCommand, String pesel) throws Exception {
-        UpdateRetireeCommand retireeCommand = ConversionUtils.convertCommandToCommand(updatePersonCommand.getDetails(), UpdateRetireeCommand.class);
+        UpdateRetireeCommand retireeCommand = conversionUtils.convertCommandToCommand(updatePersonCommand.getDetails(), UpdateRetireeCommand.class);
 
         Retiree retiree = retireeRepository.findById(pesel).orElseThrow(() -> new EntityNotFoundException(
                 MessageFormat.format("person with pesel={0} not found", pesel)));
@@ -45,6 +46,7 @@ public class RetireeUpdateStrategy implements UpdateStrategy<RetireeDto, UpdateR
             retiree.setEmail(updatePersonCommand.getEmail());
         }
         if (retireeCommand != null) {
+            validator.validate(retireeCommand);
             if (retireeCommand.getPensionAmount() != null) {
                 retiree.setPensionAmount(retireeCommand.getPensionAmount());
             }

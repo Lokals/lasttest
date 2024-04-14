@@ -20,11 +20,12 @@ public class EmployeeUpdateStrategy implements UpdateStrategy<EmployeeDto, Updat
 
     private final EmployeeRepository employeeRepository;
     private final PersonValidator validator;
+    private final ConversionUtils conversionUtils;
 
 
     @Override
     public EmployeeDto updateAndValidate(UpdatePersonCommand<UpdateEmployeeCommand> updatePersonCommand, String pesel) throws Exception {
-        UpdateEmployeeCommand employeeCommand = ConversionUtils.convertCommandToCommand(updatePersonCommand.getDetails(), UpdateEmployeeCommand.class);
+        UpdateEmployeeCommand employeeCommand = conversionUtils.convertCommandToCommand(updatePersonCommand.getDetails(), UpdateEmployeeCommand.class);
 
         Employee employee = employeeRepository.findById(pesel).orElseThrow(() -> new EntityNotFoundException(
                 MessageFormat.format("person with pesel={0} not found", pesel)));

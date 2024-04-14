@@ -30,6 +30,7 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
     private final PersonValidator validator;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     private final PersonRepository personRepository;
+    private final ConversionUtils conversionUtils;
     private static final Logger logger = LoggerFactory.getLogger(EmployeeImportStrategy.class);
     private static final DateParser DATE_PARSER = FastDateFormat.getInstance("yyyy-MM-dd");
     private final List<Map<String, Object>> personBatch = new ArrayList<>();
@@ -47,7 +48,7 @@ public class EmployeeImportStrategy implements ImportStrategy<EmployeeDto> {
 
     @Override
     public PersonDto validateAndSave(CreatePersonCommand<?> command) {
-        EmployeeDto employeeDto = ConversionUtils.convertMapToDto((Map) command.getDetails(), EmployeeDto.class);
+        EmployeeDto employeeDto = conversionUtils.convertMapToDto((Map) command.getDetails(), EmployeeDto.class);
         validateDto(employeeDto);
         return saveEmployee(employeeDto);
     }

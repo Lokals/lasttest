@@ -24,4 +24,13 @@
                                  referencedTableName="person"
                                  referencedColumnNames="pesel"/>
     </changeSet>
+
+    <changeSet id="6" author="mk">
+        <addColumn tableName="employee_position">
+            <column name="version" type="bigint" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>
