@@ -29,6 +29,7 @@ public class CsvProcessingService {
     private final StrategyManager strategyManager;
     private final ImportStatusService importStatusService;
     private final PersonManagementProperties properties;
+
     private static final Logger logger = LoggerFactory.getLogger(CsvImportServiceImpl.class);
 
 
@@ -48,12 +49,12 @@ public class CsvProcessingService {
             logger.error("Error processing row: " + record, e);
         }
     }
-
+    @Transactional
     private void runBatchInserts() {
         strategyManager.getAllStrategies().forEach(ImportStrategy::processBatch);
     }
 
-    @Transactional
+
     public void processFile(MultipartFile file, ImportStatus importStatus) {
         AtomicInteger processedLines = new AtomicInteger(0);
         List<String> batch = new ArrayList<>();

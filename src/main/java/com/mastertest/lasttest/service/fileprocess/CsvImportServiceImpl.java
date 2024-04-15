@@ -3,7 +3,6 @@ package com.mastertest.lasttest.service.fileprocess;
 import com.mastertest.lasttest.common.FileProcessingException;
 import com.mastertest.lasttest.model.importfile.ImportStatus;
 import lombok.AllArgsConstructor;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,6 +13,7 @@ public class CsvImportServiceImpl implements CsvImportService {
     private final CsvProcessingService csvProcessingService;
     private final ImportLockService importLockService;
     private final ImportStatusService importStatusService;
+    private final FileProcessingAsyncService fileProcessingAsyncService;
 
     public ImportStatus importCsv(MultipartFile file) {
         if (!importLockService.tryLockImportProcess()) {
@@ -21,7 +21,7 @@ public class CsvImportServiceImpl implements CsvImportService {
         }
         try {
             ImportStatus importStatus = importStatusService.createNewImportStatus(file.getOriginalFilename());
-            runProcessingFile(file, importStatus);
+            fileProcessingAsyncService.runProcessingFile(file, importStatus);
             return importStatus;
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -30,10 +30,10 @@ public class CsvImportServiceImpl implements CsvImportService {
         }
     }
 
-    @Async("fileProcessingExecutor")
-    public void runProcessingFile(MultipartFile file, ImportStatus status){
-        csvProcessingService.processFile(file, status);
-    }
+//    @Async("fileProcessingExecutor")
+//    public void runProcessingFile(MultipartFile file, ImportStatus status){
+//        csvProcessingService.processFile(file, status);
+//    }
 
 
 }
