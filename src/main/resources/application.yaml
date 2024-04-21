@@ -32,3 +32,7 @@ server:
 person-management:
   default-page-size: 10
   batch-size: 5000
+  queue-capacity: 10000
+  thread-name-prefix: FileProcThread-
+
+

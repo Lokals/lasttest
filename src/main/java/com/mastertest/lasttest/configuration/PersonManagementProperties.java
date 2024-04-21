@@ -14,4 +14,6 @@ public class PersonManagementProperties {
 
     private int defaultPageSize;
     private int batchSize;
+    private int queueCapacity;
+    private String threadNamePrefix;
 }

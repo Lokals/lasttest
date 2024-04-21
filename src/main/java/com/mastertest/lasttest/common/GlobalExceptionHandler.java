@@ -51,7 +51,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ExceptionDto handleIllegalArgumentException(IllegalArgumentException exception) {
-        return new ExceptionDto(exception.getMessage());
+        return new ExceptionDto("Invalid data provided. Please check your data and try again.");
     }
 
     @ExceptionHandler(JsonMappingException.class)
