@@ -34,5 +34,3 @@ person-management:
   batch-size: 5000
   queue-capacity: 10000
   thread-name-prefix: FileProcThread-
-
-

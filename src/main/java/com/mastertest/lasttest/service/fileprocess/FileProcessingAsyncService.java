@@ -7,14 +7,21 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.concurrent.CompletableFuture;
+
 @RequiredArgsConstructor
 @Service
 public class FileProcessingAsyncService {
 
     private final CsvProcessingService csvProcessingService;
     @Async("fileProcessingExecutor")
-    public void runProcessingFile(MultipartFile file, ImportStatus status){
-        csvProcessingService.processFile(file, status);
+    public CompletableFuture<Void> runProcessingFile(MultipartFile file, ImportStatus status, Runnable onFinish){
+        try {
+            csvProcessingService.processFile(file, status);
+        } finally {
+            onFinish.run();
+        }
+        return CompletableFuture.completedFuture(null);
     }
 
 }

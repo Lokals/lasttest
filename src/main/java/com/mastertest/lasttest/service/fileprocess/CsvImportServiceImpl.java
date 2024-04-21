@@ -16,24 +16,18 @@ public class CsvImportServiceImpl implements CsvImportService {
     private final FileProcessingAsyncService fileProcessingAsyncService;
 
     public ImportStatus importCsv(MultipartFile file) {
-        if (!importLockService.tryLockImportProcess()) {
+        boolean locked = importLockService.tryLockImportProcess();
+        if (!locked) {
             throw new FileProcessingException("Import is already in progress.");
         }
+        ImportStatus importStatus = importStatusService.createNewImportStatus(file.getOriginalFilename());
         try {
-            ImportStatus importStatus = importStatusService.createNewImportStatus(file.getOriginalFilename());
-            fileProcessingAsyncService.runProcessingFile(file, importStatus);
-            return importStatus;
+            fileProcessingAsyncService.runProcessingFile(file, importStatus, () -> {
+                importLockService.unlockImportProcess();
+            });
         } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
             importLockService.unlockImportProcess();
         }
+        return importStatus;
     }
-
-//    @Async("fileProcessingExecutor")
-//    public void runProcessingFile(MultipartFile file, ImportStatus status){
-//        csvProcessingService.processFile(file, status);
-//    }
-
-
 }
